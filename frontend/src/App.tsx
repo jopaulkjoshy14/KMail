@@ -4,7 +4,8 @@ function App() {
   const [backendStatus, setBackendStatus] = useState<string>("Loading...")
 
   useEffect(() => {
-    fetch("http://localhost:4000/health")
+    const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+fetch(`${BACKEND_URL}/health`)
       .then(res => res.json())
       .then(data => setBackendStatus(data.message))
       .catch(() => setBackendStatus("Backend not reachable"))
