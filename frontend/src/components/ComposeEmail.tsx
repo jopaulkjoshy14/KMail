@@ -1,36 +1,46 @@
-import React, { useState } from 'react'
+import React, { useState } from "react";
 
-export default function ComposeEmail() {
-  const [to, setTo] = useState('')
-  const [subject, setSubject] = useState('')
-  const [body, setBody] = useState('')
-  const [status, setStatus] = useState<string | null>(null)
+const BACKEND_URL = "http://localhost:4000";
 
-  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL
+const Compose: React.FC<{ username: string }> = ({ username }) => {
+  const [to, setTo] = useState("");
+  const [subject, setSubject] = useState("");
+  const [body, setBody] = useState("");
+  const [message, setMessage] = useState("");
 
   const handleSend = async () => {
     if (!to || !subject || !body) {
-      alert('Please fill in all fields')
-      return
+      setMessage("⚠️ Please fill all fields before sending.");
+      return;
     }
+
+    const email = {
+      from: username,   // ✅ sender is now the logged-in user
+      to,
+      subject,
+      body,
+      date: new Date().toLocaleString(),
+    };
 
     try {
       const res = await fetch(`${BACKEND_URL}/emails/send`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ to, subject, body }),
-      })
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(email),
+      });
 
-      if (!res.ok) throw new Error('Failed to send email')
-
-      setStatus('Email sent successfully!')
-      setTo('')
-      setSubject('')
-      setBody('')
+      if (res.ok) {
+        setMessage("✅ Email sent successfully!");
+        setTo("");
+        setSubject("");
+        setBody("");
+      } else {
+        setMessage("❌ Failed to send email");
+      }
     } catch (err) {
-      setStatus('Error sending email')
+      setMessage("❌ Error connecting to backend");
     }
-  }
+  };
 
   return (
     <div>
@@ -39,21 +49,26 @@ export default function ComposeEmail() {
         type="text"
         placeholder="To"
         value={to}
-        onChange={e => setTo(e.target.value)}
+        onChange={(e) => setTo(e.target.value)}
       />
+      <br />
       <input
         type="text"
         placeholder="Subject"
         value={subject}
-        onChange={e => setSubject(e.target.value)}
+        onChange={(e) => setSubject(e.target.value)}
       />
+      <br />
       <textarea
         placeholder="Body"
         value={body}
-        onChange={e => setBody(e.target.value)}
+        onChange={(e) => setBody(e.target.value)}
       />
+      <br />
       <button onClick={handleSend}>Send</button>
-      {status && <p>{status}</p>}
+      {message && <p>{message}</p>}
     </div>
-  )
-}
+  );
+};
+
+export default Compose;
