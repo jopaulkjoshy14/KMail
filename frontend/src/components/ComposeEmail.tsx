@@ -22,7 +22,7 @@ const ComposeEmail: React.FC<ComposeProps> = ({ username }) => {
       from: username, // sender is the logged-in user
       to,
       subject,
-      body
+      body,
     };
 
     try {
@@ -38,7 +38,8 @@ const ComposeEmail: React.FC<ComposeProps> = ({ username }) => {
         setSubject("");
         setBody("");
       } else {
-        setMessage("❌ Failed to send email");
+        const data = await res.json();
+        setMessage(`❌ Failed to send email: ${data.error || "Unknown error"}`);
       }
     } catch {
       setMessage("❌ Backend not reachable");
@@ -66,15 +67,6 @@ const ComposeEmail: React.FC<ComposeProps> = ({ username }) => {
         placeholder="Body"
         value={body}
         onChange={(e) => setBody(e.target.value)}
-      />
-      <br />
-      <button onClick={handleSend}>Send</button>
-      {message && <p>{message}</p>}
-    </div>
-  );
-};
-
-export default ComposeEmail;        onChange={(e) => setBody(e.target.value)}
       />
       <br />
       <button onClick={handleSend}>Send</button>
