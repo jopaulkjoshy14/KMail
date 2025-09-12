@@ -2,8 +2,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import bcrypt from "bcrypt";
-import sqlite3 from "sqlite3";
-import { open } from "sqlite";
+import { initDB } from "./db.js";
 
 dotenv.config();
 
@@ -11,101 +10,83 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Initialize SQLite
 let db;
-(async () => {
-  db = await open({
-    filename: "./kmail.db",
-    driver: sqlite3.Database
-  });
 
-  // Create tables if not exist
-  await db.exec(`
-    CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      username TEXT UNIQUE,
-      passwordHash TEXT,
-      emailType TEXT
-    );
-  `);
+// Initialize DB
+initDB().then(database => {
+  db = database;
+  console.log("✅ Database ready");
+});
 
-  await db.exec(`
-    CREATE TABLE IF NOT EXISTS emails (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      sender TEXT,
-      recipient TEXT,
-      subject TEXT,
-      body TEXT,
-      date TEXT
-    );
-  `);
-})();
-
+// --------------------
 // Health check
+// --------------------
 app.get("/health", (req, res) => {
   res.json({ status: "ok", message: "KMail backend running" });
 });
 
-// Register user
-app.post("/register", async (req, res) => {
+// --------------------
+// User registration
+// --------------------
+app.post("/users/register", async (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) return res.status(400).json({ error: "Missing fields" });
 
+  const hashedPassword = await bcrypt.hash(password, 10);
   try {
-    const passwordHash = await bcrypt.hash(password, 10);
-    const emailType = "@kmail";
-    const emailUsername = `${username}${emailType}`;
-
-    await db.run(
-      "INSERT INTO users (username, passwordHash, emailType) VALUES (?, ?, ?)",
-      [emailUsername, passwordHash, emailType]
-    );
-
-    res.json({ message: "User registered", username: emailUsername });
+    await db.run("INSERT INTO users (username, password, email) VALUES (?, ?, ?)", [
+      username,
+      hashedPassword,
+      `${username}@kmail`,
+    ]);
+    res.json({ message: "User registered successfully" });
   } catch (err) {
-    if (err.code === "SQLITE_CONSTRAINT") {
-      res.status(400).json({ error: "Username already exists" });
-    } else {
-      res.status(500).json({ error: "Server error" });
-    }
+    res.status(400).json({ error: "Username already exists" });
   }
 });
 
-// Login user
-app.post("/login", async (req, res) => {
+// --------------------
+// User login
+// --------------------
+app.post("/users/login", async (req, res) => {
   const { username, password } = req.body;
-  const emailUsername = username.includes("@") ? username : `${username}@kmail`;
+  if (!username || !password) return res.status(400).json({ error: "Missing fields" });
 
-  const user = await db.get("SELECT * FROM users WHERE username = ?", emailUsername);
-  if (!user) return res.status(400).json({ error: "User not found" });
+  const user = await db.get("SELECT * FROM users WHERE username = ?", username);
+  if (!user) return res.status(400).json({ error: "Invalid username or password" });
 
-  const match = await bcrypt.compare(password, user.passwordHash);
-  if (!match) return res.status(400).json({ error: "Incorrect password" });
+  const match = await bcrypt.compare(password, user.password);
+  if (!match) return res.status(400).json({ error: "Invalid username or password" });
 
-  res.json({ message: "Login successful", username: emailUsername });
+  res.json({ message: "Login successful", username: user.username });
 });
 
+// --------------------
 // Get inbox
-app.get("/emails/inbox/:user", async (req, res) => {
-  const user = req.params.user;
-  const emails = await db.all("SELECT * FROM emails WHERE recipient = ?", user);
+// --------------------
+app.get("/emails/inbox/:username", async (req, res) => {
+  const username = req.params.username;
+  const emails = await db.all("SELECT * FROM emails WHERE recipient = ?", username);
   res.json({ emails });
 });
 
+// --------------------
 // Get sent
-app.get("/emails/sent/:user", async (req, res) => {
-  const user = req.params.user;
-  const emails = await db.all("SELECT * FROM emails WHERE sender = ?", user);
+// --------------------
+app.get("/emails/sent/:username", async (req, res) => {
+  const username = req.params.username;
+  const emails = await db.all("SELECT * FROM emails WHERE sender = ?", username);
   res.json({ emails });
 });
 
+// --------------------
 // Send email
+// --------------------
 app.post("/emails/send", async (req, res) => {
   const { from, to, subject, body } = req.body;
   if (!from || !to || !subject || !body) return res.status(400).json({ error: "Missing fields" });
 
   const date = new Date().toLocaleString();
-
   await db.run(
     "INSERT INTO emails (sender, recipient, subject, body, date) VALUES (?, ?, ?, ?, ?)",
     [from, to, subject, body, date]
@@ -115,6 +96,4 @@ app.post("/emails/send", async (req, res) => {
 });
 
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => {
-  console.log(`✅ KMail backend running on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`✅ KMail backend running on port ${PORT}`));
