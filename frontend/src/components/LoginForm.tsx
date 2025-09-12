@@ -6,30 +6,61 @@ type Props = {
 
 export default function LoginForm({ onLogin }: Props) {
   const [username, setUsername] = useState('')
-  const [error, setError] = useState('')
+  const [password, setPassword] = useState('')
+  const [isRegister, setIsRegister] = useState(false)
+  const [message, setMessage] = useState('')
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const trimmed = username.trim()
-    if (!trimmed) {
-      setError('⚠️ Please enter a username')
+    if (!username || !password) {
+      setMessage('⚠️ Fill both fields')
       return
     }
-    setError('')
-    onLogin(trimmed)
+
+    try {
+      const res = await fetch(`${BACKEND_URL}/${isRegister ? 'register' : 'login'}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      })
+      const data = await res.json()
+
+      if (res.ok) {
+        onLogin(data.username)
+      } else {
+        setMessage(`❌ ${data.error}`)
+      }
+    } catch {
+      setMessage('❌ Backend not reachable')
+    }
   }
 
   return (
-    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxWidth: '300px', margin: '0 auto' }}>
-      <input
-        type="text"
-        placeholder="Username"
-        value={username}
-        onChange={e => setUsername(e.target.value)}
-      />
-      <button type="submit" disabled={!username.trim()}>Login</button>
-      {error && <p style={{ color: 'red' }}>{error}</p>}
-      {/* Future: Add Google login button here */}
-    </form>
+    <div>
+      <h2>{isRegister ? 'Register' : 'Login'}</h2>
+      <form onSubmit={handleSubmit}>
+        <input
+          type="text"
+          placeholder="Username"
+          value={username}
+          onChange={e => setUsername(e.target.value)}
+        />
+        <br />
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={e => setPassword(e.target.value)}
+        />
+        <br />
+        <button type="submit">{isRegister ? 'Register' : 'Login'}</button>
+      </form>
+      <button onClick={() => setIsRegister(!isRegister)}>
+        {isRegister ? 'Already have an account? Login' : 'Create new account'}
+      </button>
+      {message && <p>{message}</p>}
+    </div>
   )
-}
+                                           }
