@@ -86,10 +86,21 @@ app.get("/emails/sent/:username", async (req, res) => {
 // Send email
 // --------------------
 app.post("/emails/send", async (req, res) => {
-  const { from, to, subject, body } = req.body;
-  if (!from || !to || !subject || !body) return res.status(400).json({ error: "Missing fields" });
+  let { from, to, subject, body } = req.body;
+
+  if (!from || !to || !subject || !body)
+    return res.status(400).json({ error: "Missing fields" });
+
+  // Ensure sender exists
+  const sender = await db.get("SELECT * FROM users WHERE email = ?", from);
+  if (!sender) return res.status(400).json({ error: "Sender not found" });
+
+  // Ensure recipient exists
+  const recipient = await db.get("SELECT * FROM users WHERE email = ?", to);
+  if (!recipient) return res.status(400).json({ error: "Recipient not found" });
 
   const date = new Date().toLocaleString();
+
   await db.run(
     "INSERT INTO emails (sender, recipient, subject, body, date) VALUES (?, ?, ?, ?, ?)",
     [from, to, subject, body, date]
