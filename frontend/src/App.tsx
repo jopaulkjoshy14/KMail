@@ -41,9 +41,9 @@ function App() {
         )}
 
         {!user && page === 'login' && <LoginForm onLogin={handleLogin} />}
-        {user && page === 'inbox' && <Inbox />}
-        {user && page === 'sent' && <Sent />}
-        {user && page === 'compose' && <ComposeEmail />}
+        {user && page === 'inbox' && <Inbox username={user} />}
+        {user && page === 'sent' && <Sent username={user} />}
+        {user && page === 'compose' && <ComposeEmail username={user} />}
       </div>
     </div>
   )
