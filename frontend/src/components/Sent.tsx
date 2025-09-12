@@ -1,40 +1,44 @@
 import React, { useEffect, useState } from "react";
 
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+
 interface Email {
-  from: string;
   to: string;
   subject: string;
   body: string;
   date: string;
 }
 
-const BACKEND_URL = "http://localhost:4000";
+interface SentProps {
+  username: string;
+}
 
-const Sent: React.FC<{ username: string }> = ({ username }) => {
-  const [sent, setSent] = useState<Email[]>([]);
+const Sent: React.FC<SentProps> = ({ username }) => {
+  const [emails, setEmails] = useState<Email[]>([]);
+  const [message, setMessage] = useState("Loading...");
 
   useEffect(() => {
-    fetch(`${BACKEND_URL}/emails/sent/${username}`)
+    fetch(`${BACKEND_URL}/emails/sent?username=${username}`)
       .then((res) => res.json())
-      .then((data) => setSent(data.emails))
-      .catch(() => setSent([]));
+      .then((data) => {
+        setEmails(data.emails || []);
+        setMessage(data.emails?.length ? "" : "No sent emails.");
+      })
+      .catch(() => setMessage("Failed to fetch sent emails"));
   }, [username]);
 
   return (
     <div>
       <h2>Sent Emails</h2>
-      {sent.length === 0 ? (
-        <p>No sent emails</p>
-      ) : (
-        sent.map((email, idx) => (
-          <div key={idx} style={{ border: "1px solid #ccc", margin: "10px", padding: "10px" }}>
-            <p><b>To:</b> {email.to}</p>
-            <p><b>Subject:</b> {email.subject}</p>
-            <p>{email.body}</p>
-            <small>{email.date}</small>
-          </div>
-        ))
-      )}
+      {message && <p>{message}</p>}
+      {emails.map((email, idx) => (
+        <div key={idx} style={{ border: "1px solid #ccc", margin: "5px", padding: "5px" }}>
+          <p><strong>To:</strong> {email.to}</p>
+          <p><strong>Subject:</strong> {email.subject}</p>
+          <p>{email.body}</p>
+          <p>{email.date}</p>
+        </div>
+      ))}
     </div>
   );
 };
