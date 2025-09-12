@@ -48,6 +48,15 @@ app.post("/users/register", async (req, res) => {
   }
 });
 
+// Check if a user exists
+app.get("/users/check", async (req, res) => {
+  const { email } = req.query;
+  if (!email) return res.status(400).json({ error: "Missing email" });
+
+  const user = await db.get("SELECT * FROM users WHERE email = ?", email);
+  res.json({ exists: !!user });
+});
+
 // --------------------
 // User login
 // --------------------
