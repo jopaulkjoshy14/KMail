@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
 interface Email {
-  to: string;
+  recipient: string;  // changed from 'to' to 'recipient'
   subject: string;
   body: string;
   date: string;
@@ -33,7 +33,7 @@ const Sent: React.FC<SentProps> = ({ username }) => {
       {message && <p>{message}</p>}
       {emails.map((email, idx) => (
         <div key={idx} style={{ border: "1px solid #ccc", margin: "5px", padding: "5px" }}>
-          <p><strong>To:</strong> {email.to}</p>
+          <p><strong>To:</strong> {email.recipient}</p> {/* use recipient */}
           <p><strong>Subject:</strong> {email.subject}</p>
           <p>{email.body}</p>
           <p>{email.date}</p>
