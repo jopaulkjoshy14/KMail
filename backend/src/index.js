@@ -29,16 +29,18 @@ app.get("/health", (req, res) => {
 // User registration
 // --------------------
 app.post("/users/register", async (req, res) => {
-  const { username, password } = req.body;
+  let { username, password } = req.body;
   if (!username || !password) return res.status(400).json({ error: "Missing fields" });
+
+  // Append @kmail.com only if not a Google email
+  if (!username.includes("@")) username = `${username}@kmail.com`;
 
   const hashedPassword = await bcrypt.hash(password, 10);
   try {
-    await db.run("INSERT INTO users (username, password, email) VALUES (?, ?, ?)", [
-      username,
-      hashedPassword,
-      `${username}@kmail`,
-    ]);
+    await db.run(
+      "INSERT INTO users (username, password, email) VALUES (?, ?, ?)",
+      [username, hashedPassword, username]
+    );
     res.json({ message: "User registered successfully" });
   } catch (err) {
     res.status(400).json({ error: "Username already exists" });
@@ -49,8 +51,11 @@ app.post("/users/register", async (req, res) => {
 // User login
 // --------------------
 app.post("/users/login", async (req, res) => {
-  const { username, password } = req.body;
+  let { username, password } = req.body;
   if (!username || !password) return res.status(400).json({ error: "Missing fields" });
+
+  // Normalize classical accounts
+  if (!username.includes("@")) username = `${username}@kmail.com`;
 
   const user = await db.get("SELECT * FROM users WHERE username = ?", username);
   if (!user) return res.status(400).json({ error: "Invalid username or password" });
@@ -83,8 +88,17 @@ app.get("/emails/sent/:username", async (req, res) => {
 // Send email
 // --------------------
 app.post("/emails/send", async (req, res) => {
-  const { from, to, subject, body } = req.body;
-  if (!from || !to || !subject || !body) return res.status(400).json({ error: "Missing fields" });
+  let { from, to, subject, body } = req.body;
+  if (!from || !to || !subject || !body)
+    return res.status(400).json({ error: "Missing fields" });
+
+  // Normalize classical accounts
+  if (!from.includes("@")) from = `${from}@kmail.com`;
+  if (!to.includes("@")) to = `${to}@kmail.com`;
+
+  // Check if recipient exists
+  const recipient = await db.get("SELECT * FROM users WHERE username = ?", to);
+  if (!recipient) return res.status(400).json({ error: "Recipient not found" });
 
   const date = new Date().toLocaleString();
   await db.run(
