@@ -19,18 +19,19 @@ export default function LoginForm({ onLogin }: Props) {
       return
     }
 
+    const finalUsername = `${username}@kmail.com` // ✅ always append
     const endpoint = isRegister ? 'register' : 'login'
 
     try {
       const res = await fetch(`${BACKEND_URL}/users/${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username: finalUsername, password }),
       })
       const data = await res.json()
       if (res.ok) {
         setMessage(data.message || 'Success')
-        onLogin(username)
+        onLogin(finalUsername) // ✅ pass the full address
       } else {
         setMessage(data.error || 'Failed')
       }
@@ -43,12 +44,16 @@ export default function LoginForm({ onLogin }: Props) {
     <div>
       <h2>{isRegister ? 'Register' : 'Login'}</h2>
       <form onSubmit={handleSubmit}>
-        <input
-          type="text"
-          placeholder="Username"
-          value={username}
-          onChange={e => setUsername(e.target.value)}
-        />
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <input
+            type="text"
+            placeholder="Username"
+            value={username}
+            onChange={e => setUsername(e.target.value)}
+            style={{ flex: 1 }}
+          />
+          <span style={{ marginLeft: '4px' }}>@kmail.com</span>
+        </div>
         <br />
         <input
           type="password"
