@@ -1,8 +1,12 @@
 import React, { useState } from "react";
 
-const BACKEND_URL = "http://localhost:4000";
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
-const Compose: React.FC<{ username: string }> = ({ username }) => {
+interface ComposeProps {
+  username: string;
+}
+
+const ComposeEmail: React.FC<ComposeProps> = ({ username }) => {
   const [to, setTo] = useState("");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
@@ -10,12 +14,12 @@ const Compose: React.FC<{ username: string }> = ({ username }) => {
 
   const handleSend = async () => {
     if (!to || !subject || !body) {
-      setMessage("⚠️ Please fill all fields before sending.");
+      setMessage("⚠️ Please fill all fields.");
       return;
     }
 
     const email = {
-      from: username,   // ✅ sender is now the logged-in user
+      from: username,   // sender is the logged-in user
       to,
       subject,
       body,
@@ -37,8 +41,8 @@ const Compose: React.FC<{ username: string }> = ({ username }) => {
       } else {
         setMessage("❌ Failed to send email");
       }
-    } catch (err) {
-      setMessage("❌ Error connecting to backend");
+    } catch {
+      setMessage("❌ Backend not reachable");
     }
   };
 
@@ -71,4 +75,4 @@ const Compose: React.FC<{ username: string }> = ({ username }) => {
   );
 };
 
-export default Compose;
+export default ComposeEmail;
