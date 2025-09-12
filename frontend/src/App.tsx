@@ -42,10 +42,18 @@ function App() {
       <h1>📧 KMail</h1>
       <p>Backend status: {backendStatus}</p>
 
-      {/* Temporary admin controls */}
-      <div style={{ margin: '10px 0' }}>
-        <button onClick={handleClearData}>Clear All Data</button>
-        {clearMessage && <p>{clearMessage}</p>}
+      {/* Temporary admin control */}
+      <div style={{
+        margin: '15px 0',
+        padding: '10px',
+        border: '1px solid #ccc',
+        borderRadius: '5px',
+        backgroundColor: '#f9f9f9'
+      }}>
+        <button onClick={handleClearData} style={{ padding: '8px 12px', cursor: 'pointer' }}>
+          Clear All Data
+        </button>
+        {clearMessage && <p style={{ marginTop: '10px' }}>{clearMessage}</p>}
       </div>
 
       <div style={{ marginTop: '20px' }}>
