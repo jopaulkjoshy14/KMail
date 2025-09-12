@@ -37,10 +37,11 @@ app.post("/users/register", async (req, res) => {
 
   const hashedPassword = await bcrypt.hash(password, 10);
   try {
-    await db.run(
-      "INSERT INTO users (username, password, email) VALUES (?, ?, ?)",
-      [username, hashedPassword, username]
-    );
+    await db.run("INSERT INTO users (username, password, email) VALUES (?, ?, ?)", [
+      username,
+      hashedPassword,
+      username,
+    ]);
     res.json({ message: "User registered successfully" });
   } catch (err) {
     res.status(400).json({ error: "Username already exists" });
@@ -51,11 +52,8 @@ app.post("/users/register", async (req, res) => {
 // User login
 // --------------------
 app.post("/users/login", async (req, res) => {
-  let { username, password } = req.body;
+  const { username, password } = req.body;
   if (!username || !password) return res.status(400).json({ error: "Missing fields" });
-
-  // Normalize classical accounts
-  if (!username.includes("@")) username = `${username}@kmail.com`;
 
   const user = await db.get("SELECT * FROM users WHERE username = ?", username);
   if (!user) return res.status(400).json({ error: "Invalid username or password" });
@@ -88,17 +86,8 @@ app.get("/emails/sent/:username", async (req, res) => {
 // Send email
 // --------------------
 app.post("/emails/send", async (req, res) => {
-  let { from, to, subject, body } = req.body;
-  if (!from || !to || !subject || !body)
-    return res.status(400).json({ error: "Missing fields" });
-
-  // Normalize classical accounts
-  if (!from.includes("@")) from = `${from}@kmail.com`;
-  if (!to.includes("@")) to = `${to}@kmail.com`;
-
-  // Check if recipient exists
-  const recipient = await db.get("SELECT * FROM users WHERE username = ?", to);
-  if (!recipient) return res.status(400).json({ error: "Recipient not found" });
+  const { from, to, subject, body } = req.body;
+  if (!from || !to || !subject || !body) return res.status(400).json({ error: "Missing fields" });
 
   const date = new Date().toLocaleString();
   await db.run(
@@ -107,6 +96,19 @@ app.post("/emails/send", async (req, res) => {
   );
 
   res.json({ message: "Email sent successfully!" });
+});
+
+// --------------------
+// DEV: Clear all data (for testing only)
+// --------------------
+app.post("/dev/clear", async (req, res) => {
+  try {
+    await db.run("DELETE FROM users;");
+    await db.run("DELETE FROM emails;");
+    res.json({ message: "✅ All data cleared" });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to clear data" });
+  }
 });
 
 const PORT = process.env.PORT || 4000;
