@@ -19,18 +19,21 @@ export default function LoginForm({ onLogin }: Props) {
       return
     }
 
+    // 👇 ensure final username has @kmail.com
+    const finalUsername = `${username.toLowerCase()}@kmail.com`
+
     const endpoint = isRegister ? 'register' : 'login'
 
     try {
       const res = await fetch(`${BACKEND_URL}/users/${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username: finalUsername, password }),
       })
       const data = await res.json()
       if (res.ok) {
         setMessage(data.message || 'Success')
-        onLogin(username)
+        onLogin(finalUsername)
       } else {
         setMessage(data.error || 'Failed')
       }
@@ -51,7 +54,7 @@ export default function LoginForm({ onLogin }: Props) {
             onChange={e => setUsername(e.target.value)}
             style={{ flex: 1 }}
           />
-          <span style={{ marginLeft: '5px', fontWeight: 'bold', color: '#555' }}>
+          <span style={{ marginLeft: '5px', color: '#777' }}>
             @kmail.com
           </span>
         </div>
@@ -71,4 +74,4 @@ export default function LoginForm({ onLogin }: Props) {
       {message && <p>{message}</p>}
     </div>
   )
-}    
+}
