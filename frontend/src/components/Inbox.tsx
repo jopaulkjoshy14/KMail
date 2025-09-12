@@ -18,7 +18,7 @@ const Inbox: React.FC<InboxProps> = ({ username }) => {
   const [message, setMessage] = useState("Loading...");
 
   useEffect(() => {
-    fetch(`${BACKEND_URL}/emails/inbox?username=${username}`)
+    fetch(`${BACKEND_URL}/emails/inbox/${username}`)
       .then((res) => res.json())
       .then((data) => {
         setEmails(data.emails || []);
