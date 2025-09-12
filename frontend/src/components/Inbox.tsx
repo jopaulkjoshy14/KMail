@@ -2,9 +2,16 @@ import React, { useEffect, useState } from "react";
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
-interface Email { from: string; subject: string; body: string; date: string; }
+interface Email {
+  sender: string;   // changed from 'from' to 'sender'
+  subject: string;
+  body: string;
+  date: string;
+}
 
-interface InboxProps { username: string; }
+interface InboxProps {
+  username: string;
+}
 
 const Inbox: React.FC<InboxProps> = ({ username }) => {
   const [emails, setEmails] = useState<Email[]>([]);
@@ -26,7 +33,7 @@ const Inbox: React.FC<InboxProps> = ({ username }) => {
       {message && <p>{message}</p>}
       {emails.map((email, idx) => (
         <div key={idx} style={{ border: "1px solid #ccc", margin: "5px", padding: "5px" }}>
-          <p><strong>From:</strong> {email.from}</p>
+          <p><strong>From:</strong> {email.sender}</p> {/* use sender */}
           <p><strong>Subject:</strong> {email.subject}</p>
           <p>{email.body}</p>
           <p>{email.date}</p>
