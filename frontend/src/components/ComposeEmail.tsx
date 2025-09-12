@@ -19,11 +19,10 @@ const ComposeEmail: React.FC<ComposeProps> = ({ username }) => {
     }
 
     const email = {
-      from: username,   // sender is the logged-in user
+      from: username, // sender is the logged-in user
       to,
       subject,
-      body,
-      date: new Date().toLocaleString(),
+      body
     };
 
     try {
@@ -67,6 +66,15 @@ const ComposeEmail: React.FC<ComposeProps> = ({ username }) => {
         placeholder="Body"
         value={body}
         onChange={(e) => setBody(e.target.value)}
+      />
+      <br />
+      <button onClick={handleSend}>Send</button>
+      {message && <p>{message}</p>}
+    </div>
+  );
+};
+
+export default ComposeEmail;        onChange={(e) => setBody(e.target.value)}
       />
       <br />
       <button onClick={handleSend}>Send</button>
