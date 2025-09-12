@@ -15,22 +15,24 @@ export default function LoginForm({ onLogin }: Props) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!username || !password) {
-      setMessage('⚠️ Fill both fields')
+      setMessage('⚠️ Please fill all fields')
       return
     }
 
+    const endpoint = isRegister ? 'register' : 'login'
+
     try {
-      const res = await fetch(`${BACKEND_URL}/${isRegister ? 'register' : 'login'}`, {
+      const res = await fetch(`${BACKEND_URL}/users/${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
+        body: JSON.stringify({ username, password }),
       })
       const data = await res.json()
-
       if (res.ok) {
-        onLogin(data.username)
+        setMessage(data.message || 'Success')
+        onLogin(username)
       } else {
-        setMessage(`❌ ${data.error}`)
+        setMessage(data.error || 'Failed')
       }
     } catch {
       setMessage('❌ Backend not reachable')
@@ -57,10 +59,10 @@ export default function LoginForm({ onLogin }: Props) {
         <br />
         <button type="submit">{isRegister ? 'Register' : 'Login'}</button>
       </form>
-      <button onClick={() => setIsRegister(!isRegister)}>
-        {isRegister ? 'Already have an account? Login' : 'Create new account'}
+      <button onClick={() => { setIsRegister(!isRegister); setMessage('') }}>
+        {isRegister ? 'Already have an account? Login' : 'New user? Register'}
       </button>
       {message && <p>{message}</p>}
     </div>
   )
-                                           }
+}
