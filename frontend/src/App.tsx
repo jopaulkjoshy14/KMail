@@ -28,7 +28,7 @@ function App() {
 
   const handleClearData = async () => {
     try {
-      const res = await fetch(`${BACKEND_URL}/clear-data`, { method: 'POST' })
+      const res = await fetch(`${BACKEND_URL}/clear`, { method: 'POST' })
       const data = await res.json()
       if (res.ok) setClearMessage('✅ All data cleared successfully!')
       else setClearMessage(`❌ Failed: ${data.error || 'Unknown error'}`)
