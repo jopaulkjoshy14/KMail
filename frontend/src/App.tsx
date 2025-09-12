@@ -27,15 +27,15 @@ function App() {
   }
 
   const handleClearData = async () => {
-    try {
-      const res = await fetch(`${BACKEND_URL}/clear`, { method: 'POST' })
-      const data = await res.json()
-      if (res.ok) setClearMessage('✅ All data cleared successfully!')
-      else setClearMessage(`❌ Failed: ${data.error || 'Unknown error'}`)
-    } catch {
-      setClearMessage('❌ Backend not reachable')
-    }
+  try {
+    const res = await fetch(`${BACKEND_URL}/dev/clear`, { method: 'POST' })
+    const data = await res.json()
+    if (res.ok) setClearMessage('✅ All data cleared successfully!')
+    else setClearMessage(`❌ Failed: ${data.error || 'Unknown error'}`)
+  } catch {
+    setClearMessage('❌ Backend not reachable')
   }
+}
 
   return (
     <div style={{ fontFamily: 'sans-serif', maxWidth: '600px', margin: '50px auto', textAlign: 'center' }}>
