@@ -1,40 +1,44 @@
 import React, { useEffect, useState } from "react";
 
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+
 interface Email {
   from: string;
-  to: string;
   subject: string;
   body: string;
   date: string;
 }
 
-const BACKEND_URL = "http://localhost:4000";
+interface InboxProps {
+  username: string;
+}
 
-const Inbox: React.FC<{ username: string }> = ({ username }) => {
-  const [inbox, setInbox] = useState<Email[]>([]);
+const Inbox: React.FC<InboxProps> = ({ username }) => {
+  const [emails, setEmails] = useState<Email[]>([]);
+  const [message, setMessage] = useState("Loading...");
 
   useEffect(() => {
-    fetch(`${BACKEND_URL}/emails/inbox/${username}`)
+    fetch(`${BACKEND_URL}/emails/inbox?username=${username}`)
       .then((res) => res.json())
-      .then((data) => setInbox(data.emails))
-      .catch(() => setInbox([]));
+      .then((data) => {
+        setEmails(data.emails || []);
+        setMessage(data.emails?.length ? "" : "No emails in inbox.");
+      })
+      .catch(() => setMessage("Failed to fetch inbox"));
   }, [username]);
 
   return (
     <div>
       <h2>Inbox</h2>
-      {inbox.length === 0 ? (
-        <p>No emails in inbox</p>
-      ) : (
-        inbox.map((email, idx) => (
-          <div key={idx} style={{ border: "1px solid #ccc", margin: "10px", padding: "10px" }}>
-            <p><b>From:</b> {email.from}</p>
-            <p><b>Subject:</b> {email.subject}</p>
-            <p>{email.body}</p>
-            <small>{email.date}</small>
-          </div>
-        ))
-      )}
+      {message && <p>{message}</p>}
+      {emails.map((email, idx) => (
+        <div key={idx} style={{ border: "1px solid #ccc", margin: "5px", padding: "5px" }}>
+          <p><strong>From:</strong> {email.from}</p>
+          <p><strong>Subject:</strong> {email.subject}</p>
+          <p>{email.body}</p>
+          <p>{email.date}</p>
+        </div>
+      ))}
     </div>
   );
 };
