@@ -10,6 +10,7 @@ function App() {
   const [backendStatus, setBackendStatus] = useState<string>('Loading...')
   const [page, setPage] = useState<Page>('login')
   const [user, setUser] = useState<string | null>(null)
+  const [clearMessage, setClearMessage] = useState<string>('')
 
   const BACKEND_URL = import.meta.env.VITE_BACKEND_URL
 
@@ -26,14 +27,13 @@ function App() {
   }
 
   const handleClearData = async () => {
-    if (!confirm("⚠️ Are you sure you want to delete ALL data? This cannot be undone!")) return;
-
     try {
-      const res = await fetch(`${BACKEND_URL}/dev/clear`, { method: "POST" });
-      const data = await res.json();
-      alert(`✅ ${data.message}`);
-    } catch (err) {
-      alert("❌ Failed to reach backend");
+      const res = await fetch(`${BACKEND_URL}/clear-data`, { method: 'POST' })
+      const data = await res.json()
+      if (res.ok) setClearMessage('✅ All data cleared successfully!')
+      else setClearMessage(`❌ Failed: ${data.error || 'Unknown error'}`)
+    } catch {
+      setClearMessage('❌ Backend not reachable')
     }
   }
 
@@ -42,6 +42,12 @@ function App() {
       <h1>📧 KMail</h1>
       <p>Backend status: {backendStatus}</p>
 
+      {/* Temporary admin controls */}
+      <div style={{ margin: '10px 0' }}>
+        <button onClick={handleClearData}>Clear All Data</button>
+        {clearMessage && <p>{clearMessage}</p>}
+      </div>
+
       <div style={{ marginTop: '20px' }}>
         {user && (
           <nav style={{ marginBottom: '20px' }}>
@@ -49,13 +55,6 @@ function App() {
             <button onClick={() => setPage('sent')}>Sent</button>
             <button onClick={() => setPage('compose')}>Compose</button>
             <button onClick={() => { setUser(null); setPage('login') }}>Logout</button>
-            {/* Temporary Clear Data Button */}
-            <button
-              onClick={handleClearData}
-              style={{ backgroundColor: 'red', color: 'white', marginLeft: '10px', padding: '5px 10px', borderRadius: '5px' }}
-            >
-              Clear All Data
-            </button>
           </nav>
         )}
 
