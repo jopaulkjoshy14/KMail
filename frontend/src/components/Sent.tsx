@@ -2,9 +2,16 @@ import React, { useEffect, useState } from "react";
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
-interface Email { to: string; subject: string; body: string; date: string; }
+interface Email {
+  to: string;
+  subject: string;
+  body: string;
+  date: string;
+}
 
-interface SentProps { username: string; }
+interface SentProps {
+  username: string;
+}
 
 const Sent: React.FC<SentProps> = ({ username }) => {
   const [emails, setEmails] = useState<Email[]>([]);
@@ -29,4 +36,11 @@ const Sent: React.FC<SentProps> = ({ username }) => {
           <p><strong>To:</strong> {email.to}</p>
           <p><strong>Subject:</strong> {email.subject}</p>
           <p>{email.body}</p>
-          <p>{
+          <p>{email.date}</p>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+export default Sent;
