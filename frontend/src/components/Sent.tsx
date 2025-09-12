@@ -1,50 +1,42 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState } from "react";
 
-type Email = {
-  id: string
-  to: string
-  subject: string
-  body: string
-  date: string
+interface Email {
+  from: string;
+  to: string;
+  subject: string;
+  body: string;
+  date: string;
 }
 
-export default function Sent() {
-  const [emails, setEmails] = useState<Email[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+const BACKEND_URL = "http://localhost:4000";
 
-  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL
+const Sent: React.FC<{ username: string }> = ({ username }) => {
+  const [sent, setSent] = useState<Email[]>([]);
 
   useEffect(() => {
-    fetch(`${BACKEND_URL}/emails/sent`)
-      .then(res => res.json())
-      .then(data => {
-        setEmails(data.emails || [])
-        setLoading(false)
-      })
-      .catch(() => {
-        setError('Failed to fetch sent emails')
-        setLoading(false)
-      })
-  }, [])
-
-  if (loading) return <p>Loading sent emails...</p>
-  if (error) return <p>{error}</p>
-  if (emails.length === 0) return <p>No sent emails.</p>
+    fetch(`${BACKEND_URL}/emails/sent/${username}`)
+      .then((res) => res.json())
+      .then((data) => setSent(data.emails))
+      .catch(() => setSent([]));
+  }, [username]);
 
   return (
     <div>
       <h2>Sent Emails</h2>
-      <ul style={{ listStyle: 'none', padding: 0 }}>
-        {emails.map(email => (
-          <li key={email.id} style={{ borderBottom: '1px solid #ccc', marginBottom: '10px', paddingBottom: '10px' }}>
-            <strong>To:</strong> {email.to} <br />
-            <strong>Subject:</strong> {email.subject} <br />
+      {sent.length === 0 ? (
+        <p>No sent emails</p>
+      ) : (
+        sent.map((email, idx) => (
+          <div key={idx} style={{ border: "1px solid #ccc", margin: "10px", padding: "10px" }}>
+            <p><b>To:</b> {email.to}</p>
+            <p><b>Subject:</b> {email.subject}</p>
             <p>{email.body}</p>
-            <small>{new Date(email.date).toLocaleString()}</small>
-          </li>
-        ))}
-      </ul>
+            <small>{email.date}</small>
+          </div>
+        ))
+      )}
     </div>
-  )
-            }
+  );
+};
+
+export default Sent;
