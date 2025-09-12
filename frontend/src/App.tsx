@@ -25,6 +25,18 @@ function App() {
     setPage('inbox')
   }
 
+  const handleClearData = async () => {
+    if (!confirm("⚠️ Are you sure you want to delete ALL data? This cannot be undone!")) return;
+
+    try {
+      const res = await fetch(`${BACKEND_URL}/dev/clear`, { method: "POST" });
+      const data = await res.json();
+      alert(`✅ ${data.message}`);
+    } catch (err) {
+      alert("❌ Failed to reach backend");
+    }
+  }
+
   return (
     <div style={{ fontFamily: 'sans-serif', maxWidth: '600px', margin: '50px auto', textAlign: 'center' }}>
       <h1>📧 KMail</h1>
@@ -37,6 +49,13 @@ function App() {
             <button onClick={() => setPage('sent')}>Sent</button>
             <button onClick={() => setPage('compose')}>Compose</button>
             <button onClick={() => { setUser(null); setPage('login') }}>Logout</button>
+            {/* Temporary Clear Data Button */}
+            <button
+              onClick={handleClearData}
+              style={{ backgroundColor: 'red', color: 'white', marginLeft: '10px', padding: '5px 10px', borderRadius: '5px' }}
+            >
+              Clear All Data
+            </button>
           </nav>
         )}
 
