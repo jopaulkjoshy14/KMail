@@ -57,6 +57,18 @@ app.get("/users/check", async (req, res) => {
   res.json({ exists: !!user });
 });
 
+// Search users for autocomplete
+app.get("/users/search", async (req, res) => {
+  const query = req.query.query;
+  if (!query) return res.json({ users: [] });
+
+  const users = await db.all(
+    "SELECT email FROM users WHERE email LIKE ? LIMIT 10",
+    [`%${query}%`]
+  );
+  res.json({ users: users.map(u => u.email) });
+});
+
 // --------------------
 // User login
 // --------------------
