@@ -8,34 +8,40 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// In-memory storage (replace with DB later)
+// In-memory storage
 let inboxEmails = [];
 let sentEmails = [];
 
-// Health check route
+// Mock users (for basic recipient validation)
+const users = ["alice@example.com", "bob@example.com", "carol@example.com"];
+
+// Health check
 app.get("/health", (req, res) => {
   res.json({ status: "ok", message: "KMail backend running" });
 });
 
-// Send email route
+// Send email
 app.post("/emails/send", (req, res) => {
   const { to, subject, body } = req.body;
   if (!to || !subject || !body) {
     return res.status(400).json({ message: "Missing fields" });
   }
+  if (!users.includes(to)) {
+    return res.status(400).json({ message: "Recipient does not exist" });
+  }
 
   const email = { id: Date.now().toString(), to, subject, body, date: new Date() };
   sentEmails.push(email);
-  inboxEmails.push({ ...email, from: "you@example.com" }); // mock recipient inbox
+  inboxEmails.push({ ...email, from: "you@example.com" }); // Simulate recipient inbox
   res.json({ message: "Email sent" });
 });
 
-// Fetch inbox emails
+// Get inbox emails
 app.get("/emails/inbox", (req, res) => {
   res.json({ emails: inboxEmails });
 });
 
-// Fetch sent emails
+// Get sent emails
 app.get("/emails/sent", (req, res) => {
   res.json({ emails: sentEmails });
 });
