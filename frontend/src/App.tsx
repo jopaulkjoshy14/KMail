@@ -18,7 +18,10 @@ function App() {
     fetch(`${BACKEND_URL}/health`)
       .then(res => res.json())
       .then(data => setBackendStatus(data.message))
-      .catch(() => setBackendStatus('Backend not reachable'))
+      .catch(err => {
+        console.error("Health check failed:", err)
+        setBackendStatus('Backend not reachable')
+      })
   }, [])
 
   const handleLogin = (username: string) => {
@@ -27,15 +30,28 @@ function App() {
   }
 
   const handleClearData = async () => {
-  try {
-    const res = await fetch(`${BACKEND_URL}/dev/clear`, { method: 'POST' })
-    const data = await res.json()
-    if (res.ok) setClearMessage('✅ All data cleared successfully!')
-    else setClearMessage(`❌ Failed: ${data.error || 'Unknown error'}`)
-  } catch {
-    setClearMessage('❌ Backend not reachable')
+    setClearMessage('Processing...')
+    try {
+      const res = await fetch(`${BACKEND_URL}/dev/clear`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: 'Could not parse error response' }))
+        console.error('Clear data failed:', errorData)
+        setClearMessage(`❌ Failed: ${errorData.error || 'Unknown error'}`)
+        return
+      }
+
+      const data = await res.json()
+      console.log('Clear data response:', data)
+      setClearMessage('✅ All data cleared successfully!')
+    } catch (err) {
+      console.error('Fetch error:', err)
+      setClearMessage(`❌ Backend not reachable: ${err}`)
+    }
   }
-}
 
   return (
     <div style={{ fontFamily: 'sans-serif', maxWidth: '600px', margin: '50px auto', textAlign: 'center' }}>
