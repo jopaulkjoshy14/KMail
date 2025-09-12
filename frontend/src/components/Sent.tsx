@@ -18,7 +18,7 @@ const Sent: React.FC<SentProps> = ({ username }) => {
   const [message, setMessage] = useState("Loading...");
 
   useEffect(() => {
-    fetch(`${BACKEND_URL}/emails/sent?username=${username}`)
+    fetch(`${BACKEND_URL}/emails/sent/${username}`)
       .then((res) => res.json())
       .then((data) => {
         setEmails(data.emails || []);
