@@ -6,10 +6,12 @@ const router = express.Router();
 
 export default (db) => {
   // --------------------
-  // Send email (encrypted body)
+  // Send email (ciphertext body stored)
   // --------------------
   router.post("/send", authenticateToken, async (req, res) => {
-    const { from, to, subject, body } = req.body;
+    const { to, subject, body } = req.body; // body should be ciphertext from client
+    const from = req.user.username; // ✅ trust JWT, not request body
+
     if (!from || !to || !subject || !body)
       return res.status(400).json({ error: "Missing fields" });
 
@@ -19,7 +21,7 @@ export default (db) => {
     if (!sender) return res.status(400).json({ error: "Sender not found" });
     if (!recipient) return res.status(400).json({ error: "Recipient not found" });
 
-    const date = new Date().toLocaleString();
+    const date = new Date().toISOString();
 
     try {
       await db.run(
@@ -28,12 +30,13 @@ export default (db) => {
       );
       res.json({ message: "Email sent successfully!" });
     } catch (err) {
+      console.error(err);
       res.status(500).json({ error: "Failed to send email" });
     }
   });
 
   // --------------------
-  // Inbox (fetch emails where recipient = username)
+  // Inbox (ciphertext returned, client must decrypt with sharedKey)
   // --------------------
   router.get("/inbox/:username", authenticateToken, async (req, res) => {
     const username = req.params.username;
@@ -43,13 +46,14 @@ export default (db) => {
         username
       );
       res.json({ emails });
-    } catch {
+    } catch (err) {
+      console.error(err);
       res.status(500).json({ error: "Failed to fetch inbox" });
     }
   });
 
   // --------------------
-  // Sent (fetch emails where sender = username)
+  // Sent (ciphertext returned, client must decrypt with sharedKey)
   // --------------------
   router.get("/sent/:username", authenticateToken, async (req, res) => {
     const username = req.params.username;
@@ -59,7 +63,8 @@ export default (db) => {
         username
       );
       res.json({ emails });
-    } catch {
+    } catch (err) {
+      console.error(err);
       res.status(500).json({ error: "Failed to fetch sent emails" });
     }
   });
