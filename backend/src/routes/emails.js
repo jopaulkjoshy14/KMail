@@ -6,14 +6,15 @@ const router = express.Router();
 
 export default (db) => {
   // --------------------
-  // Send email (ciphertext body stored)
+  // Send email (ciphertext + iv stored)
   // --------------------
   router.post("/send", authenticateToken, async (req, res) => {
-    const { to, subject, body } = req.body; // body should be ciphertext from client
-    const from = req.user.username; // ✅ trust JWT, not request body
+    const { to, subject, body, iv } = req.body; // body = ciphertext, iv = AES IV
+    const from = req.user.username; // ✅ trust JWT
 
-    if (!from || !to || !subject || !body)
+    if (!from || !to || !subject || !body || !iv) {
       return res.status(400).json({ error: "Missing fields" });
+    }
 
     // Validate sender/recipient exist
     const sender = await db.get("SELECT * FROM users WHERE email = ?", from);
@@ -25,8 +26,9 @@ export default (db) => {
 
     try {
       await db.run(
-        "INSERT INTO emails (sender, recipient, subject, body, date) VALUES (?, ?, ?, ?, ?)",
-        [from, to, subject, body, date]
+        `INSERT INTO emails (sender, recipient, subject, body, iv, date) 
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [from, to, subject, body, iv, date]
       );
       res.json({ message: "Email sent successfully!" });
     } catch (err) {
@@ -36,13 +38,17 @@ export default (db) => {
   });
 
   // --------------------
-  // Inbox (ciphertext returned, client must decrypt with sharedKey)
+  // Inbox (return ciphertext + iv, client must decrypt)
   // --------------------
   router.get("/inbox/:username", authenticateToken, async (req, res) => {
     const username = req.params.username;
+
     try {
       const emails = await db.all(
-        "SELECT * FROM emails WHERE recipient = ? ORDER BY id DESC",
+        `SELECT id, sender, recipient, subject, body, iv, date
+         FROM emails 
+         WHERE recipient = ? 
+         ORDER BY id DESC`,
         username
       );
       res.json({ emails });
@@ -53,13 +59,17 @@ export default (db) => {
   });
 
   // --------------------
-  // Sent (ciphertext returned, client must decrypt with sharedKey)
+  // Sent (return ciphertext + iv, client must decrypt)
   // --------------------
   router.get("/sent/:username", authenticateToken, async (req, res) => {
     const username = req.params.username;
+
     try {
       const emails = await db.all(
-        "SELECT * FROM emails WHERE sender = ? ORDER BY id DESC",
+        `SELECT id, sender, recipient, subject, body, iv, date
+         FROM emails 
+         WHERE sender = ? 
+         ORDER BY id DESC`,
         username
       );
       res.json({ emails });
