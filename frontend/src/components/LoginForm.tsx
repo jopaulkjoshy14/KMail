@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { encapsulate } from '../utils/kyber'; // client-side Kyber functions
 
 type Props = {
   onLogin: (username: string) => void;
@@ -23,29 +24,61 @@ export default function LoginForm({ onLogin }: Props) {
     const endpoint = isRegister ? 'register' : 'login';
 
     try {
-      const res = await fetch(`${BACKEND_URL}/users/${endpoint}`, {
+      // Step 1: Register or login (get server Kyber public key)
+      const res1 = await fetch(`${BACKEND_URL}/users/${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: finalUsername, password }),
       });
 
-      const data = await res.json();
+      const data1 = await res1.json();
 
-      if (res.ok) {
-        setMessage(data.message || 'Success');
-
-        // ✅ Store JWT in localStorage
-        if (data.token) localStorage.setItem('jwt', data.token);
-
-        // ✅ Retrieve / generate sharedKey for AES encryption
-        // This could be from a server endpoint returning the Kyber shared key
-        if (data.sharedKey) localStorage.setItem('sharedKey', data.sharedKey);
-
-        onLogin(finalUsername);
-      } else {
-        setMessage(data.error || 'Failed');
+      if (!res1.ok) {
+        setMessage(data1.error || 'Failed');
+        return;
       }
-    } catch {
+
+      if (isRegister) {
+        // Registration complete
+        setMessage(data1.message || 'Registered successfully');
+        return;
+      }
+
+      // Login: server returns Kyber public key
+      const serverPubKeyBase64 = data1.publicKey;
+      if (!serverPubKeyBase64) {
+        setMessage('❌ Missing server Kyber public key');
+        return;
+      }
+      const serverPubKey = Uint8Array.from(atob(serverPubKeyBase64), c => c.charCodeAt(0));
+
+      // Step 2: Encapsulate shared key using server public key
+      const { ciphertext, sharedSecret } = encapsulate(serverPubKey);
+
+      // Send ciphertext to server to complete login
+      const res2 = await fetch(`${BACKEND_URL}/users/login/complete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: finalUsername,
+          ciphertext: btoa(String.fromCharCode(...ciphertext)),
+        }),
+      });
+
+      const data2 = await res2.json();
+      if (!res2.ok) {
+        setMessage(data2.error || 'Failed to complete login');
+        return;
+      }
+
+      // ✅ Store JWT and AES shared key
+      localStorage.setItem('jwt', data2.token);
+      localStorage.setItem('sharedKey', btoa(String.fromCharCode(...sharedSecret)));
+
+      setMessage('✅ Login successful');
+      onLogin(finalUsername);
+    } catch (err) {
+      console.error(err);
       setMessage('❌ Backend not reachable');
     }
   };
