@@ -14,7 +14,7 @@ const ComposeEmail: React.FC<ComposeProps> = ({ username }) => {
   const [message, setMessage] = useState("");
   const [suggestions, setSuggestions] = useState<string[]>([]);
 
-  // Fetch suggestions whenever 'to' changes
+  // Fetch suggestions for autocomplete
   useEffect(() => {
     if (!to) {
       setSuggestions([]);
@@ -23,7 +23,9 @@ const ComposeEmail: React.FC<ComposeProps> = ({ username }) => {
 
     const fetchSuggestions = async () => {
       try {
-        const res = await fetch(`${BACKEND_URL}/users/search?query=${encodeURIComponent(to)}`);
+        const res = await fetch(
+          `${BACKEND_URL}/users/search?query=${encodeURIComponent(to)}`
+        );
         const data = await res.json();
         if (res.ok) setSuggestions(data.users || []);
       } catch {
@@ -41,15 +43,17 @@ const ComposeEmail: React.FC<ComposeProps> = ({ username }) => {
     }
 
     try {
-      // Check if recipient exists
-      const checkRes = await fetch(`${BACKEND_URL}/users/check?email=${encodeURIComponent(to)}`);
+      // Check recipient exists
+      const checkRes = await fetch(
+        `${BACKEND_URL}/users/check?email=${encodeURIComponent(to)}`
+      );
       const checkData = await checkRes.json();
       if (!checkRes.ok || !checkData.exists) {
         setMessage("❌ Recipient does not exist.");
         return;
       }
 
-      // ✅ Encrypt body with AES-256 using sharedKey
+      // Encrypt email body with AES-256
       const sharedKey = localStorage.getItem("sharedKey");
       if (!sharedKey) {
         setMessage("❌ Missing encryption key. Please log in again.");
@@ -60,9 +64,9 @@ const ComposeEmail: React.FC<ComposeProps> = ({ username }) => {
       const email = { from: username, to, subject, body: encryptedBody };
       const res = await fetch(`${BACKEND_URL}/emails/send`, {
         method: "POST",
-        headers: { 
+        headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("jwt")}` // optional JWT auth
+          Authorization: `Bearer ${localStorage.getItem("jwt")}`,
         },
         body: JSON.stringify(email),
       });
@@ -93,14 +97,24 @@ const ComposeEmail: React.FC<ComposeProps> = ({ username }) => {
         onChange={(e) => setTo(e.target.value)}
         autoComplete="off"
       />
-      {/* Suggestions dropdown */}
       {suggestions.length > 0 && (
-        <ul style={{ border: "1px solid #ccc", maxHeight: "100px", overflowY: "auto", margin: 0, padding: "0 10px" }}>
+        <ul
+          style={{
+            border: "1px solid #ccc",
+            maxHeight: "100px",
+            overflowY: "auto",
+            margin: 0,
+            padding: "0 10px",
+          }}
+        >
           {suggestions.map((user, idx) => (
             <li
               key={idx}
               style={{ cursor: "pointer", listStyle: "none", padding: "5px 0" }}
-              onClick={() => { setTo(user); setSuggestions([]); }}
+              onClick={() => {
+                setTo(user);
+                setSuggestions([]);
+              }}
             >
               {user}
             </li>
@@ -108,9 +122,18 @@ const ComposeEmail: React.FC<ComposeProps> = ({ username }) => {
         </ul>
       )}
       <br />
-      <input type="text" placeholder="Subject" value={subject} onChange={(e) => setSubject(e.target.value)} />
+      <input
+        type="text"
+        placeholder="Subject"
+        value={subject}
+        onChange={(e) => setSubject(e.target.value)}
+      />
       <br />
-      <textarea placeholder="Body" value={body} onChange={(e) => setBody(e.target.value)} />
+      <textarea
+        placeholder="Body"
+        value={body}
+        onChange={(e) => setBody(e.target.value)}
+      />
       <br />
       <button onClick={handleSend}>Send</button>
       {message && <p>{message}</p>}
