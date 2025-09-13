@@ -1,45 +1,34 @@
-// src/index.js
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import { initDB } from "./db.js";
-
+import connectDB from "./db.js";
 import authRoutes from "./routes/auth.js";
 import emailRoutes from "./routes/emails.js";
-import { authenticateToken } from "./middleware/auth.js";
+import profileRoutes from "./routes/profile.js";
+import { errorHandler } from "./middleware/errorHandler.js";
 
+// Load environment variables from Render (dotenv not needed locally, but kept for dev)
 dotenv.config();
 
 const app = express();
+const PORT = process.env.PORT || 5000;
+
+// Connect to MongoDB
+connectDB();
+
+// Middleware
 app.use(cors());
 app.use(express.json());
 
-// Initialize DB
-initDB()
-  .then((database) => {
-    app.locals.db = database;
-    console.log("✅ Database ready");
+// Routes
+app.use("/api/auth", authRoutes);
+app.use("/api/emails", emailRoutes);
+app.use("/api/profile", profileRoutes);
 
-    // Mount routes after DB is ready
-    app.use("/users", authRoutes(database));
-    app.use("/emails", emailRoutes(database));
-  })
-  .catch((err) => {
-    console.error("❌ Failed to initialize DB:", err);
-    process.exit(1);
-  });
+// Error Handler
+app.use(errorHandler);
 
-// Health check
-app.get("/health", (req, res) => {
-  res.json({ status: "ok", message: "KMail backend running" });
+// Start Server
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
-
-// Example protected route
-app.get("/protected", authenticateToken, (req, res) => {
-  res.json({ message: "You are authenticated!", user: req.user });
-});
-
-const PORT = process.env.PORT || 4000;
-app.listen(PORT, () =>
-  console.log(`✅ KMail backend running on port ${PORT}`)
-);
