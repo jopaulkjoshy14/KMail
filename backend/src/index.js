@@ -5,6 +5,7 @@ import dotenv from "dotenv";
 import { initDB } from "./db.js";
 
 import authRoutes from "./routes/auth.js";
+import emailRoutes from "./routes/emails.js";
 import { authenticateToken } from "./middleware/auth.js";
 
 dotenv.config();
@@ -18,6 +19,10 @@ initDB()
   .then((database) => {
     app.locals.db = database;
     console.log("✅ Database ready");
+
+    // Mount routes after DB is ready
+    app.use("/users", authRoutes(database));
+    app.use("/emails", emailRoutes(database));
   })
   .catch((err) => {
     console.error("❌ Failed to initialize DB:", err);
@@ -28,9 +33,6 @@ initDB()
 app.get("/health", (req, res) => {
   res.json({ status: "ok", message: "KMail backend running" });
 });
-
-// Routes
-app.use("/users", authRoutes);
 
 // Example protected route
 app.get("/protected", authenticateToken, (req, res) => {
