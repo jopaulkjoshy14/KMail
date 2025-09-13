@@ -1,5 +1,7 @@
+// src/components/ComposeEmail.tsx
 import React, { useState, useEffect } from "react";
 import CryptoJS from "crypto-js";
+import { useNavigate } from "react-router-dom";
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
@@ -12,7 +14,9 @@ const ComposeEmail: React.FC<ComposeProps> = ({ username }) => {
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [message, setMessage] = useState("");
+  const [sending, setSending] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
+  const navigate = useNavigate();
 
   // Fetch suggestions for autocomplete
   useEffect(() => {
@@ -23,9 +27,22 @@ const ComposeEmail: React.FC<ComposeProps> = ({ username }) => {
 
     const fetchSuggestions = async () => {
       try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          navigate("/login");
+          return;
+        }
+
         const res = await fetch(
-          `${BACKEND_URL}/users/search?query=${encodeURIComponent(to)}`
+          `${BACKEND_URL}/users/search?query=${encodeURIComponent(to)}`,
+          { headers: { Authorization: `Bearer ${token}` } }
         );
+
+        if (res.status === 401) {
+          navigate("/login");
+          return;
+        }
+
         const data = await res.json();
         if (res.ok) setSuggestions(data.users || []);
       } catch {
@@ -34,7 +51,7 @@ const ComposeEmail: React.FC<ComposeProps> = ({ username }) => {
     };
 
     fetchSuggestions();
-  }, [to]);
+  }, [to, navigate]);
 
   const handleSend = async () => {
     if (!to || !subject || !body) {
@@ -42,14 +59,25 @@ const ComposeEmail: React.FC<ComposeProps> = ({ username }) => {
       return;
     }
 
+    setSending(true);
+    setMessage("");
+
     try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        navigate("/login");
+        return;
+      }
+
       // Check recipient exists
       const checkRes = await fetch(
-        `${BACKEND_URL}/users/check?email=${encodeURIComponent(to)}`
+        `${BACKEND_URL}/users/check?email=${encodeURIComponent(to)}`,
+        { headers: { Authorization: `Bearer ${token}` } }
       );
       const checkData = await checkRes.json();
       if (!checkRes.ok || !checkData.exists) {
         setMessage("❌ Recipient does not exist.");
+        setSending(false);
         return;
       }
 
@@ -57,8 +85,10 @@ const ComposeEmail: React.FC<ComposeProps> = ({ username }) => {
       const sharedKey = localStorage.getItem("sharedKey");
       if (!sharedKey) {
         setMessage("❌ Missing encryption key. Please log in again.");
+        setSending(false);
         return;
       }
+
       const encryptedBody = CryptoJS.AES.encrypt(body, sharedKey).toString();
 
       const email = { from: username, to, subject, body: encryptedBody };
@@ -66,7 +96,7 @@ const ComposeEmail: React.FC<ComposeProps> = ({ username }) => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("jwt")}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(email),
       });
@@ -84,12 +114,14 @@ const ComposeEmail: React.FC<ComposeProps> = ({ username }) => {
       }
     } catch {
       setMessage("❌ Backend not reachable");
+    } finally {
+      setSending(false);
     }
   };
 
   return (
     <div>
-      <h2>Compose Email</h2>
+      <h2>✉️ Compose Email</h2>
       <input
         type="text"
         placeholder="To"
@@ -101,10 +133,12 @@ const ComposeEmail: React.FC<ComposeProps> = ({ username }) => {
         <ul
           style={{
             border: "1px solid #ccc",
+            borderRadius: "5px",
             maxHeight: "100px",
             overflowY: "auto",
             margin: 0,
-            padding: "0 10px",
+            padding: "5px 10px",
+            background: "#fff",
           }}
         >
           {suggestions.map((user, idx) => (
@@ -135,7 +169,9 @@ const ComposeEmail: React.FC<ComposeProps> = ({ username }) => {
         onChange={(e) => setBody(e.target.value)}
       />
       <br />
-      <button onClick={handleSend}>Send</button>
+      <button onClick={handleSend} disabled={sending}>
+        {sending ? "Sending..." : "Send"}
+      </button>
       {message && <p>{message}</p>}
     </div>
   );
