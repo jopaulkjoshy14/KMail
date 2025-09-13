@@ -1,46 +1,54 @@
-import React, { useState } from 'react'
+import React, { useState } from 'react';
 
 type Props = {
-  onLogin: (username: string) => void
-}
+  onLogin: (username: string) => void;
+};
 
 export default function LoginForm({ onLogin }: Props) {
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
-  const [isRegister, setIsRegister] = useState(false)
-  const [message, setMessage] = useState('')
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [isRegister, setIsRegister] = useState(false);
+  const [message, setMessage] = useState('');
 
-  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL
+  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     if (!username || !password) {
-      setMessage('⚠️ Please fill all fields')
-      return
+      setMessage('⚠️ Please fill all fields');
+      return;
     }
 
-    // 👇 ensure final username has @kmail.com
-    const finalUsername = `${username.toLowerCase()}@kmail.com`
-
-    const endpoint = isRegister ? 'register' : 'login'
+    const finalUsername = `${username.toLowerCase()}@kmail.com`;
+    const endpoint = isRegister ? 'register' : 'login';
 
     try {
       const res = await fetch(`${BACKEND_URL}/users/${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: finalUsername, password }),
-      })
-      const data = await res.json()
+      });
+
+      const data = await res.json();
+
       if (res.ok) {
-        setMessage(data.message || 'Success')
-        onLogin(finalUsername)
+        setMessage(data.message || 'Success');
+
+        // ✅ Store JWT in localStorage
+        if (data.token) localStorage.setItem('jwt', data.token);
+
+        // ✅ Retrieve / generate sharedKey for AES encryption
+        // This could be from a server endpoint returning the Kyber shared key
+        if (data.sharedKey) localStorage.setItem('sharedKey', data.sharedKey);
+
+        onLogin(finalUsername);
       } else {
-        setMessage(data.error || 'Failed')
+        setMessage(data.error || 'Failed');
       }
     } catch {
-      setMessage('❌ Backend not reachable')
+      setMessage('❌ Backend not reachable');
     }
-  }
+  };
 
   return (
     <div>
@@ -73,5 +81,5 @@ export default function LoginForm({ onLogin }: Props) {
       </button>
       {message && <p>{message}</p>}
     </div>
-  )
+  );
 }
