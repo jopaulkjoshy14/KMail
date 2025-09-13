@@ -1,20 +1,26 @@
-// src/routes/auth.js
 import express from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { kyber } from "../utils/kyber.js"; // ⬅️ we'll implement Kyber helper
+import {
+  generateKeyPair,
+  encapsulate,
+  decapsulate,
+} from "../utils/kyber.js";
 
 const router = express.Router();
 
-export default () => {
-  // User registration
-  router.post("/register", async (req, res) => {
-    const db = req.app.locals.db;
-    let { username, password } = req.body;
+// Temporary in-memory storage of server Kyber private keys per session
+// In production -> use Redis or DB, not memory
+const kyberSessions = {};
 
-    if (!username || !password) {
+export default (db) => {
+  // --------------------
+  // User registration
+  // --------------------
+  router.post("/register", async (req, res) => {
+    let { username, password } = req.body;
+    if (!username || !password)
       return res.status(400).json({ error: "Missing fields" });
-    }
 
     if (!username.includes("@")) username = `${username}@kmail.com`;
 
@@ -31,40 +37,72 @@ export default () => {
     }
   });
 
-  // User login
+  // --------------------
+  // Login Step 1:
+  // Verify credentials + return Kyber public key
+  // --------------------
   router.post("/login", async (req, res) => {
-    const db = req.app.locals.db;
-    const { username, password, clientPubKey } = req.body;
-
-    if (!username || !password || !clientPubKey) {
+    const { username, password } = req.body;
+    if (!username || !password)
       return res.status(400).json({ error: "Missing fields" });
-    }
 
-    const user = await db.get("SELECT * FROM users WHERE username = ?", username);
-    if (!user) {
+    const user = await db.get(
+      "SELECT * FROM users WHERE username = ?",
+      username
+    );
+    if (!user)
       return res.status(400).json({ error: "Invalid username or password" });
-    }
 
     const match = await bcrypt.compare(password, user.password);
-    if (!match) {
+    if (!match)
       return res.status(400).json({ error: "Invalid username or password" });
-    }
 
-    // ✅ PQC handshake (Kyber)
-    const { serverPubKey, sharedSecret } = kyber.exchange(clientPubKey);
+    // ✅ Generate Kyber keypair for this session
+    const { publicKey, privateKey } = generateKeyPair();
 
-    // ✅ Use shared secret to sign JWT
+    // Store privateKey in memory for this username session
+    kyberSessions[username] = privateKey;
+
+    // Send publicKey back to client (so it can encapsulate)
+    res.json({
+      message: "Credentials valid, proceed with Kyber exchange",
+      publicKey: Buffer.from(publicKey).toString("base64"),
+    });
+  });
+
+  // --------------------
+  // Login Step 2:
+  // Client sends ciphertext, server decapsulates & issues JWT
+  // --------------------
+  router.post("/login/complete", async (req, res) => {
+    const { username, ciphertext } = req.body;
+    if (!username || !ciphertext)
+      return res.status(400).json({ error: "Missing fields" });
+
+    const privateKey = kyberSessions[username];
+    if (!privateKey)
+      return res.status(400).json({ error: "No Kyber session found" });
+
+    // Convert ciphertext back to Uint8Array
+    const ctBytes = Uint8Array.from(Buffer.from(ciphertext, "base64"));
+
+    // Derive shared secret
+    const sharedSecret = decapsulate(ctBytes, privateKey);
+
+    // Wipe stored private key (one-time use)
+    delete kyberSessions[username];
+
+    // ✅ Issue JWT signed with server secret
     const token = jwt.sign(
-      { username: user.username, email: user.email },
-      sharedSecret.toString("hex"),
+      {
+        username,
+        sharedKey: Buffer.from(sharedSecret).toString("base64"),
+      },
+      process.env.JWT_SECRET,
       { expiresIn: "1h" }
     );
 
-    res.json({
-      message: "Login successful",
-      token,
-      serverPubKey, // ⬅️ send back so client can verify
-    });
+    res.json({ message: "Login complete", token });
   });
 
   return router;
