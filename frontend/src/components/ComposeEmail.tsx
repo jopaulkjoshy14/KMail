@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import CryptoJS from "crypto-js";
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
@@ -26,7 +27,6 @@ const ComposeEmail: React.FC<ComposeProps> = ({ username }) => {
         const data = await res.json();
         if (res.ok) setSuggestions(data.users || []);
       } catch {
-        // Ignore errors silently for suggestions
         setSuggestions([]);
       }
     };
@@ -41,6 +41,7 @@ const ComposeEmail: React.FC<ComposeProps> = ({ username }) => {
     }
 
     try {
+      // Check if recipient exists
       const checkRes = await fetch(`${BACKEND_URL}/users/check?email=${encodeURIComponent(to)}`);
       const checkData = await checkRes.json();
       if (!checkRes.ok || !checkData.exists) {
@@ -48,10 +49,21 @@ const ComposeEmail: React.FC<ComposeProps> = ({ username }) => {
         return;
       }
 
-      const email = { from: username, to, subject, body };
+      // ✅ Encrypt body with AES-256 using sharedKey
+      const sharedKey = localStorage.getItem("sharedKey");
+      if (!sharedKey) {
+        setMessage("❌ Missing encryption key. Please log in again.");
+        return;
+      }
+      const encryptedBody = CryptoJS.AES.encrypt(body, sharedKey).toString();
+
+      const email = { from: username, to, subject, body: encryptedBody };
       const res = await fetch(`${BACKEND_URL}/emails/send`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("jwt")}` // optional JWT auth
+        },
         body: JSON.stringify(email),
       });
 
