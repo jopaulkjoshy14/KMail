@@ -17,7 +17,8 @@ export async function initDB() {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       username TEXT UNIQUE NOT NULL,
       password TEXT NOT NULL,
-      email TEXT UNIQUE NOT NULL
+      email TEXT UNIQUE NOT NULL,
+      publicKey TEXT    -- store user's Kyber public key (base64)
     );
     
     CREATE TABLE IF NOT EXISTS emails (
