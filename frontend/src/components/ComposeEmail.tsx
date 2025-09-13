@@ -1,5 +1,5 @@
 // src/components/ComposeEmail.tsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import CryptoJS from "crypto-js";
 import { useNavigate } from "react-router-dom";
 
@@ -18,16 +18,23 @@ const ComposeEmail: React.FC<ComposeProps> = ({ username }) => {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const navigate = useNavigate();
 
-  // Fetch suggestions for autocomplete
+  // Clear messages after 4 seconds
+  useEffect(() => {
+    if (!message) return;
+    const timer = setTimeout(() => setMessage(""), 4000);
+    return () => clearTimeout(timer);
+  }, [message]);
+
+  // 🔍 Debounced fetch for autocomplete suggestions
   useEffect(() => {
     if (!to) {
       setSuggestions([]);
       return;
     }
 
-    const fetchSuggestions = async () => {
+    const delayDebounce = setTimeout(async () => {
       try {
-        const token = localStorage.getItem("token");
+        const token = localStorage.getItem("jwt");
         if (!token) {
           navigate("/login");
           return;
@@ -48,12 +55,25 @@ const ComposeEmail: React.FC<ComposeProps> = ({ username }) => {
       } catch {
         setSuggestions([]);
       }
-    };
+    }, 300); // 300ms debounce
 
-    fetchSuggestions();
+    return () => clearTimeout(delayDebounce);
   }, [to, navigate]);
 
-  const handleSend = async () => {
+  // 🔑 AES-256 encryption with IV
+  const encryptBody = useCallback((body: string, sharedKey: string) => {
+    const iv = CryptoJS.lib.WordArray.random(16);
+    const key = CryptoJS.SHA256(sharedKey); // derive 256-bit key
+    const encrypted = CryptoJS.AES.encrypt(body, key, { iv });
+    return {
+      ciphertext: encrypted.toString(),
+      iv: iv.toString(),
+    };
+  }, []);
+
+  const handleSend = async (e: React.FormEvent) => {
+    e.preventDefault();
+
     if (!to || !subject || !body) {
       setMessage("⚠️ Please fill all fields.");
       return;
@@ -63,35 +83,25 @@ const ComposeEmail: React.FC<ComposeProps> = ({ username }) => {
     setMessage("");
 
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
+      const token = localStorage.getItem("jwt");
+      const sharedKey = localStorage.getItem("sharedKey");
+
+      if (!token || !sharedKey) {
         navigate("/login");
         return;
       }
 
-      // Check recipient exists
-      const checkRes = await fetch(
-        `${BACKEND_URL}/users/check?email=${encodeURIComponent(to)}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      const checkData = await checkRes.json();
-      if (!checkRes.ok || !checkData.exists) {
-        setMessage("❌ Recipient does not exist.");
-        setSending(false);
-        return;
-      }
+      // Encrypt email body
+      const { ciphertext, iv } = encryptBody(body, sharedKey);
 
-      // Encrypt email body with AES-256
-      const sharedKey = localStorage.getItem("sharedKey");
-      if (!sharedKey) {
-        setMessage("❌ Missing encryption key. Please log in again.");
-        setSending(false);
-        return;
-      }
+      const email = {
+        from: username,
+        to,
+        subject,
+        body: ciphertext,
+        iv,
+      };
 
-      const encryptedBody = CryptoJS.AES.encrypt(body, sharedKey).toString();
-
-      const email = { from: username, to, subject, body: encryptedBody };
       const res = await fetch(`${BACKEND_URL}/emails/send`, {
         method: "POST",
         headers: {
@@ -122,56 +132,64 @@ const ComposeEmail: React.FC<ComposeProps> = ({ username }) => {
   return (
     <div>
       <h2>✉️ Compose Email</h2>
-      <input
-        type="text"
-        placeholder="To"
-        value={to}
-        onChange={(e) => setTo(e.target.value)}
-        autoComplete="off"
-      />
-      {suggestions.length > 0 && (
-        <ul
-          style={{
-            border: "1px solid #ccc",
-            borderRadius: "5px",
-            maxHeight: "100px",
-            overflowY: "auto",
-            margin: 0,
-            padding: "5px 10px",
-            background: "#fff",
-          }}
-        >
-          {suggestions.map((user, idx) => (
-            <li
-              key={idx}
-              style={{ cursor: "pointer", listStyle: "none", padding: "5px 0" }}
-              onClick={() => {
-                setTo(user);
-                setSuggestions([]);
-              }}
-            >
-              {user}
-            </li>
-          ))}
-        </ul>
-      )}
-      <br />
-      <input
-        type="text"
-        placeholder="Subject"
-        value={subject}
-        onChange={(e) => setSubject(e.target.value)}
-      />
-      <br />
-      <textarea
-        placeholder="Body"
-        value={body}
-        onChange={(e) => setBody(e.target.value)}
-      />
-      <br />
-      <button onClick={handleSend} disabled={sending}>
-        {sending ? "Sending..." : "Send"}
-      </button>
+      <form onSubmit={handleSend}>
+        <input
+          type="text"
+          placeholder="To"
+          value={to}
+          onChange={(e) => setTo(e.target.value)}
+          autoComplete="off"
+        />
+        {suggestions.length > 0 && (
+          <ul
+            style={{
+              border: "1px solid #ccc",
+              borderRadius: "5px",
+              maxHeight: "120px",
+              overflowY: "auto",
+              margin: 0,
+              padding: "5px 10px",
+              background: "#fff",
+            }}
+          >
+            {suggestions.map((user, idx) => (
+              <li
+                key={idx}
+                style={{
+                  cursor: "pointer",
+                  listStyle: "none",
+                  padding: "5px 0",
+                }}
+                onClick={() => {
+                  setTo(user);
+                  setSuggestions([]);
+                }}
+              >
+                {user}
+              </li>
+            ))}
+          </ul>
+        )}
+        <br />
+        <input
+          type="text"
+          placeholder="Subject"
+          value={subject}
+          onChange={(e) => setSubject(e.target.value)}
+        />
+        <br />
+        <textarea
+          placeholder="Body"
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          rows={8}
+          style={{ width: "100%", resize: "vertical" }}
+        />
+        <br />
+        <button type="submit" disabled={sending}>
+          {sending ? "Sending..." : "Send"}
+        </button>
+      </form>
       {message && <p>{message}</p>}
     </div>
   );
