@@ -1,3 +1,4 @@
+// src/components/Sent.tsx
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
@@ -16,6 +17,9 @@ interface Props {
   token: string;
 }
 
+// ✅ Use environment variable instead of hardcoding
+const API_BASE = import.meta.env.VITE_API_BASE || "/api";
+
 const Sent: React.FC<Props> = ({ token }) => {
   const [emails, setEmails] = useState<Email[]>([]);
   const [loading, setLoading] = useState(true);
@@ -23,7 +27,7 @@ const Sent: React.FC<Props> = ({ token }) => {
   const fetchSent = async () => {
     setLoading(true);
     try {
-      const res = await axios.get("https://kmail.onrender.com/api/emails/sent", {
+      const res = await axios.get(`${API_BASE}/emails/sent`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setEmails(res.data);
@@ -43,10 +47,16 @@ const Sent: React.FC<Props> = ({ token }) => {
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-2xl font-bold">Sent Emails</h2>
         <div className="space-x-2">
-          <Link to="/" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+          <Link
+            to="/"
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          >
             Inbox
           </Link>
-          <Link to="/compose" className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+          <Link
+            to="/compose"
+            className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+          >
             Compose
           </Link>
         </div>
@@ -66,7 +76,9 @@ const Sent: React.FC<Props> = ({ token }) => {
                   </p>
                   <p className="text-gray-600">{email.subject}</p>
                 </div>
-                <p className="text-gray-500 text-sm">{new Date(email.createdAt).toLocaleString()}</p>
+                <p className="text-gray-500 text-sm">
+                  {new Date(email.createdAt).toLocaleString()}
+                </p>
               </div>
               <p className="mt-2">{email.content}</p>
             </div>
