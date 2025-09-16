@@ -1,6 +1,8 @@
+// src/api/emails.ts
 import axios from "axios";
 
-const API_BASE = "https://kmail.onrender.com/api";
+// ✅ Use env variable or fallback to "/api"
+const API_BASE = import.meta.env.VITE_API_BASE || "/api";
 
 export const fetchInbox = (token: string) =>
   axios.get(`${API_BASE}/emails/inbox`, {
@@ -12,7 +14,10 @@ export const fetchSent = (token: string) =>
     headers: { Authorization: `Bearer ${token}` },
   });
 
-export const sendEmail = (token: string, data: { recipients: string[], subject: string, content: string }) =>
+export const sendEmail = (
+  token: string,
+  data: { recipients: string[]; subject: string; content: string }
+) =>
   axios.post(`${API_BASE}/emails/send`, data, {
     headers: { Authorization: `Bearer ${token}` },
   });
