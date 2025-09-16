@@ -1,3 +1,4 @@
+// src/components/ComposeEmail.tsx
 import React, { useState } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
@@ -6,6 +7,9 @@ import { Link, useNavigate } from "react-router-dom";
 interface Props {
   token: string;
 }
+
+// ✅ Use environment variable or fallback to "/api"
+const API_BASE = import.meta.env.VITE_API_BASE || "/api";
 
 const ComposeEmail: React.FC<Props> = ({ token }) => {
   const [recipients, setRecipients] = useState("");
@@ -23,7 +27,7 @@ const ComposeEmail: React.FC<Props> = ({ token }) => {
     setLoading(true);
     try {
       await axios.post(
-        "https://kmail.onrender.com/api/emails/send",
+        `${API_BASE}/emails/send`,
         {
           recipients: recipients.split(",").map((r) => r.trim()),
           subject,
