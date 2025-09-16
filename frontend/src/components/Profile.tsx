@@ -1,3 +1,4 @@
+// src/components/Profile.tsx
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
@@ -6,6 +7,9 @@ import { Link } from "react-router-dom";
 interface Props {
   token: string;
 }
+
+// ✅ Use env variable or fallback to "/api"
+const API_BASE = import.meta.env.VITE_API_BASE || "/api";
 
 const Profile: React.FC<Props> = ({ token }) => {
   const [name, setName] = useState("");
@@ -16,7 +20,7 @@ const Profile: React.FC<Props> = ({ token }) => {
   const fetchProfile = async () => {
     setLoading(true);
     try {
-      const res = await axios.get("https://kmail.onrender.com/api/profile", {
+      const res = await axios.get(`${API_BASE}/profile`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setName(res.data.name);
@@ -37,7 +41,7 @@ const Profile: React.FC<Props> = ({ token }) => {
     setLoading(true);
     try {
       await axios.put(
-        "https://kmail.onrender.com/api/profile",
+        `${API_BASE}/profile`,
         { name, password },
         { headers: { Authorization: `Bearer ${token}` } }
       );
