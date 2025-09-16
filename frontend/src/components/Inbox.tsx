@@ -1,3 +1,4 @@
+// src/components/Inbox.tsx
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
@@ -16,6 +17,9 @@ interface Props {
   token: string;
 }
 
+// ✅ Use environment variable (fallback to "/api" for dev proxy)
+const API_BASE = import.meta.env.VITE_API_BASE || "/api";
+
 const Inbox: React.FC<Props> = ({ token }) => {
   const [emails, setEmails] = useState<Email[]>([]);
   const [loading, setLoading] = useState(true);
@@ -23,7 +27,7 @@ const Inbox: React.FC<Props> = ({ token }) => {
   const fetchInbox = async () => {
     setLoading(true);
     try {
-      const res = await axios.get("https://kmail.onrender.com/api/emails/inbox", {
+      const res = await axios.get(`${API_BASE}/emails/inbox`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setEmails(res.data);
@@ -41,7 +45,7 @@ const Inbox: React.FC<Props> = ({ token }) => {
   const handleClear = async () => {
     if (!window.confirm("Are you sure you want to clear all emails?")) return;
     try {
-      await axios.delete("https://kmail.onrender.com/api/emails/clear", {
+      await axios.delete(`${API_BASE}/emails/clear`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       toast.success("All emails cleared");
@@ -56,10 +60,16 @@ const Inbox: React.FC<Props> = ({ token }) => {
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-2xl font-bold">Inbox</h2>
         <div className="space-x-2">
-          <Link to="/compose" className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+          <Link
+            to="/compose"
+            className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+          >
             Compose
           </Link>
-          <Link to="/sent" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+          <Link
+            to="/sent"
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          >
             Sent
           </Link>
           <button
@@ -80,10 +90,14 @@ const Inbox: React.FC<Props> = ({ token }) => {
             <div key={email._id} className="bg-white p-4 rounded shadow">
               <div className="flex justify-between items-center">
                 <div>
-                  <p className="font-semibold">{email.sender.name} &lt;{email.sender.email}&gt;</p>
+                  <p className="font-semibold">
+                    {email.sender.name} &lt;{email.sender.email}&gt;
+                  </p>
                   <p className="text-gray-600">{email.subject}</p>
                 </div>
-                <p className="text-gray-500 text-sm">{new Date(email.createdAt).toLocaleString()}</p>
+                <p className="text-gray-500 text-sm">
+                  {new Date(email.createdAt).toLocaleString()}
+                </p>
               </div>
               <p className="mt-2">{email.content}</p>
             </div>
