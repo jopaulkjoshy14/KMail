@@ -1,3 +1,4 @@
+// src/components/LoginForm.tsx
 import React, { useState } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
@@ -5,6 +6,9 @@ import { toast } from "react-toastify";
 interface Props {
   onLogin: (token: string) => void;
 }
+
+// ✅ Use environment variable instead of hardcoding
+const API_BASE = import.meta.env.VITE_API_BASE || "/api";
 
 const LoginForm: React.FC<Props> = ({ onLogin }) => {
   const [email, setEmail] = useState("");
@@ -15,7 +19,7 @@ const LoginForm: React.FC<Props> = ({ onLogin }) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await axios.post("https://kmail.onrender.com/api/auth/login", {
+      const res = await axios.post(`${API_BASE}/auth/login`, {
         email,
         password,
       });
@@ -30,7 +34,8 @@ const LoginForm: React.FC<Props> = ({ onLogin }) => {
   };
 
   const handleGoogleLogin = () => {
-    window.location.href = "https://kmail.onrender.com/api/auth/google/callback";
+    // ✅ Redirects correctly based on API_BASE
+    window.location.href = `${API_BASE}/auth/google`;
   };
 
   return (
