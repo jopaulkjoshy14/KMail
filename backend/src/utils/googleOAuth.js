@@ -22,21 +22,16 @@ export const getGoogleAuthURL = () => {
   return url;
 };
 
-// Get user info from Google using auth code
-export const getGoogleUser = async (code) => {
-  try {
-    const { tokens } = await oauth2Client.getToken(code);
-    oauth2Client.setCredentials(tokens);
+// Get tokens from auth code
+export const getGoogleTokens = async (code) => {
+  const { tokens } = await oauth2Client.getToken(code);
+  oauth2Client.setCredentials(tokens);
+  return tokens; // { access_token, id_token, refresh_token, ... }
+};
 
-    const oauth2 = google.oauth2({
-      auth: oauth2Client,
-      version: "v2",
-    });
-
-    const { data } = await oauth2.userinfo.get();
-    return data; // { id, email, name, picture, ... }
-  } catch (error) {
-    console.error("Google OAuth error:", error);
-    throw new Error("Failed to fetch Google user");
-  }
+// Get user info from Google
+export const getGoogleUser = async (id_token, access_token) => {
+  const oauth2 = google.oauth2({ auth: oauth2Client, version: "v2" });
+  const { data } = await oauth2.userinfo.get();
+  return data; // { id, email, name, picture, ... }
 };
