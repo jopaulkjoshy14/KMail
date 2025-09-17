@@ -1,7 +1,5 @@
-// src/api/emails.ts
 import axios from "axios";
 
-// ✅ Use env variable or fallback to "/api"
 const API_BASE = import.meta.env.VITE_API_BASE || "/api";
 
 export const fetchInbox = (token: string) =>
