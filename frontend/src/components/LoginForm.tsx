@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
 
@@ -13,6 +13,25 @@ const LoginForm: React.FC<Props> = ({ onLogin, onSwitchToRegister }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState<{ backend: string; database: string } | null>(null);
+
+  // ✅ Fetch backend + DB status
+  useEffect(() => {
+    const fetchStatus = async () => {
+      try {
+        const res = await axios.get(`${API_BASE}/health`);
+        setStatus({
+          backend: res.data.backend,
+          database: res.data.database,
+        });
+      } catch {
+        setStatus({ backend: "offline", database: "unknown" });
+      }
+    };
+    fetchStatus();
+    const interval = setInterval(fetchStatus, 30000); // update every 30s
+    return () => clearInterval(interval);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,6 +53,18 @@ const LoginForm: React.FC<Props> = ({ onLogin, onSwitchToRegister }) => {
 
   const handleGoogleLogin = () => {
     window.location.href = `${API_BASE}/auth/google`;
+  };
+
+  const getColor = (state: string) => {
+    switch (state) {
+      case "online":
+      case "connected":
+        return "text-green-600";
+      case "connecting":
+        return "text-yellow-500";
+      default:
+        return "text-red-600";
+    }
   };
 
   return (
@@ -84,6 +115,20 @@ const LoginForm: React.FC<Props> = ({ onLogin, onSwitchToRegister }) => {
             >
               Register here
             </button>
+          </p>
+        </div>
+
+        {/* ✅ Status Panel */}
+        <div className="mt-6 p-3 bg-gray-50 rounded text-sm border text-center">
+          <p>
+            Backend:{" "}
+            <span className={getColor(status?.backend || "offline")}>
+              {status?.backend || "offline"}
+            </span>{" "}
+            | Database:{" "}
+            <span className={getColor(status?.database || "unknown")}>
+              {status?.database || "unknown"}
+            </span>
           </p>
         </div>
       </div>
