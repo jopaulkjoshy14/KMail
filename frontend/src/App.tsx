@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import LoginForm from "./components/LoginForm";
+import RegisterForm from "./components/RegisterForm";
 import Inbox from "./components/Inbox";
 import Sent from "./components/Sent";
 import ComposeEmail from "./components/ComposeEmail";
@@ -9,12 +10,14 @@ import { ToastContainer } from "react-toastify";
 
 const App: React.FC = () => {
   const [token, setToken] = useState<string | null>(null);
+  const [showRegister, setShowRegister] = useState(false);
   const location = useLocation();
 
-  // Check URL for Google OAuth token
+  // ✅ Check for Google OAuth token or stored JWT
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const oauthToken = params.get("token");
+
     if (oauthToken) {
       localStorage.setItem("token", oauthToken);
       setToken(oauthToken);
@@ -25,10 +28,22 @@ const App: React.FC = () => {
     }
   }, [location]);
 
+  // ✅ Not logged in → show login or register
   if (!token) {
-    return <LoginForm onLogin={(t) => setToken(t)} />;
+    return showRegister ? (
+      <RegisterForm
+        onRegister={(t) => setToken(t)}
+        onSwitchToLogin={() => setShowRegister(false)}
+      />
+    ) : (
+      <LoginForm
+        onLogin={(t) => setToken(t)}
+        onSwitchToRegister={() => setShowRegister(true)}
+      />
+    );
   }
 
+  // ✅ Logged in → show app routes
   return (
     <div className="min-h-screen bg-gray-100">
       <ToastContainer />
