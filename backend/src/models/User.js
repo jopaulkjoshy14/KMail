@@ -5,9 +5,12 @@ const userSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true },
-    password: { type: String }, // optional for Google OAuth users
-    googleId: { type: String }, // store Google ID if OAuth
-    avatar: { type: String },   // Google profile picture or custom avatar
+    password: { type: String }, // not required for Google users
+    googleId: { type: String },
+    avatar: {
+      type: String,
+      default: "https://ui-avatars.com/api/?name=User",
+    },
   },
   { timestamps: true }
 );
@@ -20,7 +23,7 @@ userSchema.pre("save", async function (next) {
   next();
 });
 
-// Method to compare password
+// Compare passwords
 userSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
