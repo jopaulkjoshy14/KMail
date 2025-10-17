@@ -1,16 +1,15 @@
-// src/components/LoginForm.tsx
 import React, { useState } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
 
 interface Props {
   onLogin: (token: string) => void;
+  onSwitchToRegister: () => void;
 }
 
-// ✅ Use environment variable instead of hardcoding
 const API_BASE = import.meta.env.VITE_API_BASE || "/api";
 
-const LoginForm: React.FC<Props> = ({ onLogin }) => {
+const LoginForm: React.FC<Props> = ({ onLogin, onSwitchToRegister }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -25,7 +24,7 @@ const LoginForm: React.FC<Props> = ({ onLogin }) => {
       });
       localStorage.setItem("token", res.data.token);
       onLogin(res.data.token);
-      toast.success("Login successful");
+      toast.success("Login successful!");
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Login failed");
     } finally {
@@ -34,7 +33,6 @@ const LoginForm: React.FC<Props> = ({ onLogin }) => {
   };
 
   const handleGoogleLogin = () => {
-    // ✅ Redirects correctly based on API_BASE
     window.location.href = `${API_BASE}/auth/google`;
   };
 
@@ -67,6 +65,7 @@ const LoginForm: React.FC<Props> = ({ onLogin }) => {
             {loading ? "Logging in..." : "Login"}
           </button>
         </form>
+
         <div className="mt-4 text-center">
           <button
             onClick={handleGoogleLogin}
@@ -74,6 +73,18 @@ const LoginForm: React.FC<Props> = ({ onLogin }) => {
           >
             Login with Google
           </button>
+        </div>
+
+        <div className="mt-4 text-center">
+          <p className="text-sm">
+            Don’t have an account?{" "}
+            <button
+              onClick={onSwitchToRegister}
+              className="text-blue-600 hover:underline"
+            >
+              Register here
+            </button>
+          </p>
         </div>
       </div>
     </div>
