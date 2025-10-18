@@ -3,17 +3,18 @@ import {
   registerUser,
   loginUser,
   googleLogin,
+  clearDatabase,
 } from "../controllers/authController.js";
+
+import { protect } from "../middleware/auth.js";
 
 const router = express.Router();
 
-// Register new user
 router.post("/register", registerUser);
-
-// Login user
 router.post("/login", loginUser);
-
-// Google OAuth callback
 router.get("/google/callback", googleLogin);
+
+// ✅ Clear all data (protected)
+router.delete("/clear-db", protect, clearDatabase);
 
 export default router;
