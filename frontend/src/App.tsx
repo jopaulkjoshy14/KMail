@@ -6,7 +6,10 @@ import Inbox from "./components/Inbox";
 import Sent from "./components/Sent";
 import ComposeEmail from "./components/ComposeEmail";
 import Profile from "./components/Profile";
-import { ToastContainer } from "react-toastify";
+import { ToastContainer, toast } from "react-toastify";
+import axios from "axios";
+
+const API_BASE = import.meta.env.VITE_API_BASE || "/api";
 
 const App: React.FC = () => {
   const [token, setToken] = useState<string | null>(null);
@@ -21,12 +24,52 @@ const App: React.FC = () => {
     if (oauthToken) {
       localStorage.setItem("token", oauthToken);
       setToken(oauthToken);
-      window.history.replaceState({}, document.title, "/"); // clean URL
+      window.history.replaceState({}, document.title, "/");
     } else {
       const storedToken = localStorage.getItem("token");
       if (storedToken) setToken(storedToken);
     }
   }, [location]);
+
+  // ✅ Auto-check JWT expiry every 60 seconds
+  useEffect(() => {
+    if (!token) return;
+
+    const interval = setInterval(() => {
+      try {
+        const payload = JSON.parse(atob(token.split(".")[1]));
+        const exp = payload.exp * 1000; // convert seconds → ms
+        if (Date.now() >= exp) {
+          localStorage.removeItem("token");
+          setToken(null);
+          toast.warn("Session expired. Please log in again.");
+        }
+      } catch {
+        localStorage.removeItem("token");
+        setToken(null);
+        toast.warn("Invalid token. Please log in again.");
+      }
+    }, 60000); // check every minute
+
+    return () => clearInterval(interval);
+  }, [token]);
+
+  // ✅ Verify token with backend once (optional safeguard)
+  useEffect(() => {
+    const verifyToken = async () => {
+      if (!token) return;
+      try {
+        await axios.get(`${API_BASE}/profile`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      } catch {
+        localStorage.removeItem("token");
+        setToken(null);
+        toast.warn("Session expired or invalid.");
+      }
+    };
+    verifyToken();
+  }, [token]);
 
   // ✅ Not logged in → show login or register
   if (!token) {
@@ -43,7 +86,7 @@ const App: React.FC = () => {
     );
   }
 
-  // ✅ Logged in → show app routes
+  // ✅ Logged in → show main routes
   return (
     <div className="min-h-screen bg-gray-100">
       <ToastContainer />
