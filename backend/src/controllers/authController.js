@@ -1,115 +1,62 @@
-import User from "../models/User.js";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
-import { getGoogleTokens, getGoogleUser } from "../utils/googleOAuth.js"; // optional
+import User from "../models/User.js";
+import mongoose from "mongoose";
 
-// Generate JWT (change 5m → 7d for longer sessions)
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: "5m" });
 };
 
-// ==================== REGISTER ====================
+// ✅ Register
 export const registerUser = async (req, res) => {
+  const { name, email, password } = req.body;
+
   try {
-    const { name, email, password } = req.body;
-
-    if (!name || !email || !password) {
-      return res.status(400).json({ message: "Please fill in all fields." });
+    const existing = await User.findOne({ email });
+    if (existing) {
+      return res.status(400).json({ message: "User already exists" });
     }
 
-    // Check if user exists
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(409).json({
-        message:
-          "An account with this email already exists. Please log in instead.",
-      });
-    }
-
-    // Create new user
     const user = await User.create({ name, email, password });
     const token = generateToken(user._id);
 
     res.status(201).json({
-      _id: user._id,
-      name: user.name,
-      email: user.email,
       token,
-      message: "Registration successful!",
+      user: { id: user._id, name: user.name, email: user.email },
     });
   } catch (error) {
-    console.error("Registration Error:", error);
-    res.status(500).json({ message: "Registration failed. Please try again." });
+    res.status(500).json({ message: "Server error" });
   }
 };
 
-// ==================== LOGIN ====================
+// ✅ Login
 export const loginUser = async (req, res) => {
+  const { email, password } = req.body;
+
   try {
-    const { email, password } = req.body;
-
-    if (!email || !password) {
-      return res.status(400).json({ message: "Please provide both email and password." });
-    }
-
     const user = await User.findOne({ email });
-
-    if (!user) {
-      return res.status(404).json({
-        message: "No account found with this email. Please register first.",
-      });
+    if (!user || !user.password) {
+      return res.status(401).json({ message: "Invalid email or password" });
     }
 
-    if (!user.password) {
-      return res.status(400).json({
-        message: "This account uses Google Sign-In. Try logging in with Google.",
-      });
-    }
-
-    const isMatch = await user.matchPassword(password);
+    const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(401).json({ message: "Incorrect password. Please try again." });
+      return res.status(401).json({ message: "Invalid email or password" });
     }
 
     const token = generateToken(user._id);
-
-    res.json({
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      token,
-      message: "Login successful!",
-    });
+    res.json({ token });
   } catch (error) {
-    console.error("Login Error:", error);
-    res.status(500).json({ message: "Login failed. Please try again later." });
+    res.status(500).json({ message: "Server error" });
   }
 };
 
-// ==================== GOOGLE LOGIN ====================
-export const googleLogin = async (req, res) => {
+// ✅ Clear all DB data (CAUTION)
+export const clearDatabase = async (req, res) => {
   try {
-    const code = req.query.code;
-    const { id_token, access_token } = await getGoogleTokens(code);
-    const googleUser = await getGoogleUser(id_token, access_token);
-
-    let user = await User.findOne({ email: googleUser.email });
-
-    // Create user if not exists
-    if (!user) {
-      user = await User.create({
-        name: googleUser.name,
-        email: googleUser.email,
-        googleId: googleUser.id,
-        avatar: googleUser.picture,
-      });
-    }
-
-    const token = generateToken(user._id);
-    const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
-    res.redirect(`${clientUrl}?token=${token}`);
+    await mongoose.connection.dropDatabase();
+    res.json({ message: "Database cleared successfully" });
   } catch (error) {
-    console.error("Google Login Error:", error);
-    res.status(500).json({ message: "Google login failed" });
+    res.status(500).json({ message: "Failed to clear database" });
   }
 };
