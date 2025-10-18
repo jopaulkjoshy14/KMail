@@ -13,35 +13,33 @@ const LoginForm: React.FC<Props> = ({ onLogin, onSwitchToRegister }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [token, setToken] = useState(localStorage.getItem("token"));
   const [status, setStatus] = useState<{ backend: string; database: string } | null>(null);
 
   // ✅ Fetch backend + DB status
+  const fetchStatus = async () => {
+    try {
+      const res = await axios.get(`${API_BASE}/health`);
+      setStatus({ backend: res.data.backend, database: res.data.database });
+    } catch {
+      setStatus({ backend: "offline", database: "unknown" });
+    }
+  };
+
   useEffect(() => {
-    const fetchStatus = async () => {
-      try {
-        const res = await axios.get(`${API_BASE}/health`);
-        setStatus({
-          backend: res.data.backend,
-          database: res.data.database,
-        });
-      } catch {
-        setStatus({ backend: "offline", database: "unknown" });
-      }
-    };
     fetchStatus();
-    const interval = setInterval(fetchStatus, 30000); // update every 30s
+    const interval = setInterval(fetchStatus, 30000);
     return () => clearInterval(interval);
   }, []);
 
+  // ✅ Login
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await axios.post(`${API_BASE}/auth/login`, {
-        email,
-        password,
-      });
+      const res = await axios.post(`${API_BASE}/auth/login`, { email, password });
       localStorage.setItem("token", res.data.token);
+      setToken(res.data.token);
       onLogin(res.data.token);
       toast.success("Login successful!");
     } catch (err: any) {
@@ -51,8 +49,24 @@ const LoginForm: React.FC<Props> = ({ onLogin, onSwitchToRegister }) => {
     }
   };
 
-  const handleGoogleLogin = () => {
-    window.location.href = `${API_BASE}/auth/google`;
+  // ✅ Logout
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    setToken(null);
+    toast.info("Logged out");
+  };
+
+  // ✅ Clear all data
+  const handleClearData = async () => {
+    if (!window.confirm("⚠️ Are you sure? This will erase ALL data in MongoDB!")) return;
+    try {
+      await axios.delete(`${API_BASE}/auth/clear-db`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      toast.success("Database cleared!");
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to clear database");
+    }
   };
 
   const getColor = (state: string) => {
@@ -71,40 +85,51 @@ const LoginForm: React.FC<Props> = ({ onLogin, onSwitchToRegister }) => {
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
       <div className="bg-white p-8 rounded shadow-md w-full max-w-md">
         <h2 className="text-2xl font-bold mb-6 text-center">KMail Login</h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <input
-            type="email"
-            placeholder="Email"
-            className="w-full p-3 border rounded"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            className="w-full p-3 border rounded"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 text-white p-3 rounded hover:bg-blue-700 transition"
-          >
-            {loading ? "Logging in..." : "Login"}
-          </button>
-        </form>
 
-        <div className="mt-4 text-center">
-          <button
-            onClick={handleGoogleLogin}
-            className="w-full bg-red-600 text-white p-3 rounded hover:bg-red-700 transition"
-          >
-            Login with Google
-          </button>
-        </div>
+        {/* ✅ Show logout if token exists */}
+        {token ? (
+          <div className="text-center space-y-4">
+            <p>You are currently logged in.</p>
+            <button
+              onClick={handleLogout}
+              className="w-full bg-red-600 text-white p-3 rounded hover:bg-red-700"
+            >
+              Logout
+            </button>
+            <button
+              onClick={handleClearData}
+              className="w-full bg-gray-700 text-white p-3 rounded hover:bg-gray-800"
+            >
+              Clear All Data
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <input
+              type="email"
+              placeholder="Email"
+              className="w-full p-3 border rounded"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+            <input
+              type="password"
+              placeholder="Password"
+              className="w-full p-3 border rounded"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-blue-600 text-white p-3 rounded hover:bg-blue-700 transition"
+            >
+              {loading ? "Logging in..." : "Login"}
+            </button>
+          </form>
+        )}
 
         <div className="mt-4 text-center">
           <p className="text-sm">
