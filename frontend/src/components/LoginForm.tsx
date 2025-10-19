@@ -32,23 +32,25 @@ const LoginForm: React.FC<Props> = ({ onLogin, onSwitchToRegister }) => {
     return () => clearInterval(interval);
   }, []);
 
-  // ✅ Login
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const res = await axios.post(`${API_BASE}/auth/login`, { email, password });
-      localStorage.setItem("token", res.data.token);
-      setToken(res.data.token);
-      onLogin(res.data.token);
-      toast.success("Login successful!");
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || "Login failed");
-    } finally {
-      setLoading(false);
-    }
-  };
-
+// ✅ Login
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setLoading(true);
+  try {
+    const res = await axios.post(`${API_BASE}/auth/login`, { email, password });
+    localStorage.setItem("token", res.data.token);
+    setToken(res.data.token);
+    onLogin(res.data.token);
+    toast.success("Login successful!");
+  } catch (err: any) {
+    // <-- Replace the old catch block with this
+    console.error(err); // logs full error in console for debugging
+    toast.error(err.response?.data?.message || "Login failed");
+  } finally {
+    setLoading(false);
+  }
+};
+  
   // ✅ Logout
   const handleLogout = () => {
     localStorage.removeItem("token");
