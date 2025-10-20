@@ -169,16 +169,16 @@ const Inbox: React.FC<Props> = ({ token }) => {
                 </p>
               </div>
 
-              <p
-                className="mt-2 cursor-pointer text-gray-800"
+              <pre
+                className="mt-2 cursor-pointer text-gray-800 whitespace-pre-wrap"
                 onClick={() => toggleExpand(email._id)}
-              >
-                {expandedIds.includes(email._id)
-                  ? email.content
-                  : email.content.length > 50
-                  ? email.content.slice(0, 50) + "..."
-                  : email.content}
-              </p>
+>
+  {expandedIds.includes(email._id)
+    ? email.content
+    : email.content.length > 50
+    ? email.content.slice(0, 50) + "..."
+    : email.content}
+</pre>
             </div>
           ))}
         </div>
