@@ -90,22 +90,56 @@ const handleSubmit = async (e: React.FormEvent) => {
 
         {/* ✅ Show logout if token exists */}
         {token ? (
-          <div className="text-center space-y-4">
-            <p>You are currently logged in.</p>
-            <button
-              onClick={handleLogout}
-              className="w-full bg-red-600 text-white p-3 rounded hover:bg-red-700"
-            >
-              Logout
-            </button>
-            <button
-              onClick={handleClearData}
-              className="w-full bg-gray-700 text-white p-3 rounded hover:bg-gray-800"
-            >
-              Clear All Data
-            </button>
-          </div>
-        ) : (
+  <div className="text-center space-y-4">
+    <p>You are currently logged in.</p>
+
+    {/* Logout */}
+    <button
+      onClick={handleLogout}
+      className="w-full bg-red-600 text-white p-3 rounded hover:bg-red-700"
+    >
+      Logout
+    </button>
+
+    {/* Clear My Emails */}
+    <button
+      onClick={async () => {
+        if (!window.confirm("⚠️ Are you sure? This will delete all your emails.")) return;
+        try {
+          await axios.delete(`${API_BASE}/auth/clear-my-emails`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          toast.success("All your emails have been deleted!");
+        } catch (err: any) {
+          toast.error(err.response?.data?.message || "Failed to clear emails");
+        }
+      }}
+      className="w-full bg-gray-700 text-white p-3 rounded hover:bg-gray-800"
+    >
+      Clear My Emails
+    </button>
+
+    {/* Admin: Clear Entire Database */}
+    <button
+      onClick={async () => {
+        const adminKey = prompt("Enter admin password to clear the entire database:");
+        if (!adminKey) return;
+        if (!window.confirm("⚠️ This will erase ALL users and emails. Continue?")) return;
+
+        try {
+          await axios.post(`${API_BASE}/auth/admin/clear-db`, { adminKey });
+          toast.success("Entire database cleared successfully!");
+        } catch (err: any) {
+          toast.error(err.response?.data?.message || "Failed to clear database");
+        }
+      }}
+      className="w-full bg-red-700 text-white p-3 rounded hover:bg-red-800 text-sm"
+    >
+      🧹 Clear Entire Database (Admin)
+    </button>
+  </div>
+) : (
+  // ...login form remains unchanged
           <form onSubmit={handleSubmit} className="space-y-4">
             <input
               type="email"
