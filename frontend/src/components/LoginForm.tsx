@@ -139,7 +139,6 @@ const handleSubmit = async (e: React.FormEvent) => {
     </button>
   </div>
 ) : (
-  // ...login form remains unchanged
           <form onSubmit={handleSubmit} className="space-y-4">
             <input
               type="email"
