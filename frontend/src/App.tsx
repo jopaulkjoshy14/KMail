@@ -1,13 +1,16 @@
+// src/App.tsx
 import React, { useEffect, useState } from "react";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { ToastContainer, toast } from "react-toastify";
+import axios from "axios";
+
 import LoginForm from "./components/LoginForm";
 import RegisterForm from "./components/RegisterForm";
+import Dashboard from "./components/Dashboard";
 import Inbox from "./components/Inbox";
 import Sent from "./components/Sent";
 import ComposeEmail from "./components/ComposeEmail";
 import Profile from "./components/Profile";
-import { ToastContainer, toast } from "react-toastify";
-import axios from "axios";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "/api";
 
@@ -86,15 +89,17 @@ const App: React.FC = () => {
     );
   }
 
-  // ✅ Logged in → show main routes
+  // ✅ Logged in → render Dashboard with nested routes
   return (
     <div className="min-h-screen bg-gray-100">
       <ToastContainer />
       <Routes>
-        <Route path="/" element={<Inbox token={token} />} />
-        <Route path="/sent" element={<Sent token={token} />} />
-        <Route path="/compose" element={<ComposeEmail token={token} />} />
-        <Route path="/profile" element={<Profile token={token} />} />
+        <Route path="/" element={<Dashboard token={token} setToken={setToken} />}>
+          <Route index element={<Inbox token={token} />} />
+          <Route path="sent" element={<Sent token={token} />} />
+          <Route path="compose" element={<ComposeEmail token={token} />} />
+          <Route path="profile" element={<Profile token={token} />} />
+        </Route>
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </div>
