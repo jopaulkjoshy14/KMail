@@ -1,25 +1,26 @@
 // src/components/Dashboard.tsx
 import React from "react";
-import { Link, Outlet } from "react-router-dom";
+import { Link, Outlet, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-toastify";
 
 interface Props {
   token: string;
-  setToken: (token: string | null) => void;
 }
 
 const API_BASE = import.meta.env.VITE_API_BASE || "/api";
 
-const Dashboard: React.FC<Props> = ({ token, setToken }) => {
+const Dashboard: React.FC<Props> = ({ token }) => {
+  const navigate = useNavigate();
+
   // Logout
   const handleLogout = () => {
     localStorage.removeItem("token");
-    setToken(null);
-    toast.info("Logged out successfully.");
+    toast.info("Logged out");
+    navigate("/"); // redirect to login
   };
 
-  // Clear all emails of current user
+  // Clear current user's emails
   const handleClearMyEmails = async () => {
     if (!window.confirm("⚠️ Are you sure? This will delete all your emails.")) return;
     try {
@@ -47,47 +48,38 @@ const Dashboard: React.FC<Props> = ({ token, setToken }) => {
   };
 
   return (
-    <div>
+    <div className="min-h-screen bg-gray-100">
       {/* Navbar */}
-      <nav className="bg-gray-800 text-white p-4 flex justify-between items-center">
+      <nav className="bg-white shadow p-4 flex justify-between items-center">
         <div className="space-x-4">
-          <Link to="/" className="hover:underline">
-            Inbox
-          </Link>
-          <Link to="/sent" className="hover:underline">
-            Sent
-          </Link>
-          <Link to="/compose" className="hover:underline">
-            Compose
-          </Link>
-          <Link to="/profile" className="hover:underline">
-            Profile
-          </Link>
+          <Link to="/" className="text-blue-600 hover:underline font-semibold">Inbox</Link>
+          <Link to="/sent" className="text-blue-600 hover:underline font-semibold">Sent</Link>
+          <Link to="/compose" className="text-blue-600 hover:underline font-semibold">Compose</Link>
+          <Link to="/profile" className="text-blue-600 hover:underline font-semibold">Profile</Link>
         </div>
-
         <div className="space-x-2">
           <button
             onClick={handleClearMyEmails}
-            className="bg-gray-600 px-3 py-1 rounded hover:bg-gray-700 text-sm"
+            className="bg-gray-700 text-white px-3 py-1 rounded hover:bg-gray-800 text-sm"
           >
             Clear My Emails
           </button>
           <button
             onClick={handleAdminClearDatabase}
-            className="bg-red-600 px-3 py-1 rounded hover:bg-red-700 text-sm"
+            className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 text-sm"
           >
-            🧹 Clear DB (Admin)
+            🧹 Clear Database
           </button>
           <button
             onClick={handleLogout}
-            className="bg-red-500 px-3 py-1 rounded hover:bg-red-600"
+            className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 text-sm"
           >
             Logout
           </button>
         </div>
       </nav>
 
-      {/* Content */}
+      {/* Page content */}
       <main className="p-6">
         <Outlet />
       </main>
