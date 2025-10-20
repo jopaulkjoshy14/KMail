@@ -14,8 +14,14 @@ const LoginForm: React.FC<Props> = ({ onLogin, onSwitchToRegister }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [token, setToken] = useState(localStorage.getItem("token"));
+  const [token, setToken] = useState<string | null>(null);
   const [status, setStatus] = useState<{ backend: string; database: string } | null>(null);
+
+  // ✅ On mount, read token from localStorage
+  useEffect(() => {
+    const storedToken = localStorage.getItem("token");
+    if (storedToken) setToken(storedToken);
+  }, []);
 
   // Fetch backend + DB status
   const fetchStatus = async () => {
@@ -58,7 +64,7 @@ const LoginForm: React.FC<Props> = ({ onLogin, onSwitchToRegister }) => {
     toast.info("Logged out");
   };
 
-  // Clear all emails of current user
+  // Clear current user emails
   const handleClearMyEmails = async () => {
     if (!window.confirm("⚠️ Are you sure? This will delete all your emails.")) return;
     try {
@@ -100,8 +106,9 @@ const LoginForm: React.FC<Props> = ({ onLogin, onSwitchToRegister }) => {
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
       <div className="bg-white p-8 rounded shadow-md w-full max-w-md">
-        <h2 className="text-2xl font-bold mb-6 text-center">KMail Login</h2>
+        <h2 className="text-2xl font-bold mb-6 text-center">KMail</h2>
 
+        {/* ✅ Always render buttons if token exists */}
         {token ? (
           <div className="text-center space-y-4">
             <p>You are currently logged in.</p>
