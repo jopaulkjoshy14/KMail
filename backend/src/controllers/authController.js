@@ -2,7 +2,7 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import User from "../models/User.js";
 import mongoose from "mongoose";
-import Mail from "../models/Mail.js"; // ✅ Import Mail for email-related clears
+import Email from "../models/Email.js"; // ✅ Import Mail for email-related clears
 
 // Generate JWT Token
 const generateToken = (id) => {
@@ -84,7 +84,7 @@ export const adminClearDatabase = async (req, res) => {
 export const clearUserEmails = async (req, res) => {
   try {
     const userId = req.user.id;
-    await Mail.deleteMany({ $or: [{ from: userId }, { to: userId }] });
+    await Email.deleteMany({ $or: [{ from: userId }, { to: userId }] });
     res.json({ message: "Your emails have been cleared successfully" });
   } catch (error) {
     console.error("User email clear error:", error);
