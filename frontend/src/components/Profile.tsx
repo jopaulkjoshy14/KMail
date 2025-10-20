@@ -2,13 +2,11 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
-import { Link } from "react-router-dom";
 
 interface Props {
   token: string;
 }
 
-// ✅ Use env variable or fallback to "/api"
 const API_BASE = import.meta.env.VITE_API_BASE || "/api";
 
 const Profile: React.FC<Props> = ({ token }) => {
@@ -34,7 +32,7 @@ const Profile: React.FC<Props> = ({ token }) => {
 
   useEffect(() => {
     fetchProfile();
-  }, []);
+  }, [token]);
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,21 +85,13 @@ const Profile: React.FC<Props> = ({ token }) => {
             placeholder="Leave blank to keep current"
           />
         </div>
-        <div className="flex space-x-2">
-          <button
-            type="submit"
-            disabled={loading}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-          >
-            {loading ? "Updating..." : "Update Profile"}
-          </button>
-          <Link
-            to="/"
-            className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500"
-          >
-            Back
-          </Link>
-        </div>
+        <button
+          type="submit"
+          disabled={loading}
+          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+        >
+          {loading ? "Updating..." : "Update Profile"}
+        </button>
       </form>
     </div>
   );
