@@ -1,3 +1,4 @@
+// src/components/LoginForm.tsx
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
@@ -16,7 +17,7 @@ const LoginForm: React.FC<Props> = ({ onLogin, onSwitchToRegister }) => {
   const [token, setToken] = useState(localStorage.getItem("token"));
   const [status, setStatus] = useState<{ backend: string; database: string } | null>(null);
 
-  // ✅ Fetch backend + DB status
+  // Fetch backend + DB status
   const fetchStatus = async () => {
     try {
       const res = await axios.get(`${API_BASE}/health`);
@@ -32,40 +33,53 @@ const LoginForm: React.FC<Props> = ({ onLogin, onSwitchToRegister }) => {
     return () => clearInterval(interval);
   }, []);
 
-// ✅ Login
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setLoading(true);
-  try {
-    const res = await axios.post(`${API_BASE}/auth/login`, { email, password });
-    localStorage.setItem("token", res.data.token);
-    setToken(res.data.token);
-    onLogin(res.data.token);
-    toast.success("Login successful!");
-  } catch (err: any) {
-    // <-- Replace the old catch block with this
-    console.error(err); // logs full error in console for debugging
-    toast.error(err.response?.data?.message || "Login failed");
-  } finally {
-    setLoading(false);
-  }
-};
-  
-  // ✅ Logout
+  // Login
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const res = await axios.post(`${API_BASE}/auth/login`, { email, password });
+      localStorage.setItem("token", res.data.token);
+      setToken(res.data.token);
+      onLogin(res.data.token);
+      toast.success("Login successful!");
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.response?.data?.message || "Login failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Logout
   const handleLogout = () => {
     localStorage.removeItem("token");
     setToken(null);
     toast.info("Logged out");
   };
 
-  // ✅ Clear all data
-  const handleClearData = async () => {
-    if (!window.confirm("⚠️ Are you sure? This will erase ALL data in MongoDB!")) return;
+  // Clear all emails of current user
+  const handleClearMyEmails = async () => {
+    if (!window.confirm("⚠️ Are you sure? This will delete all your emails.")) return;
     try {
-      await axios.delete(`${API_BASE}/auth/clear-db`, {
+      await axios.delete(`${API_BASE}/auth/clear-my-emails`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      toast.success("Database cleared!");
+      toast.success("All your emails have been deleted!");
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to clear emails");
+    }
+  };
+
+  // Admin: Clear entire database
+  const handleAdminClearDatabase = async () => {
+    const adminKey = prompt("Enter admin password to clear the entire database:");
+    if (!adminKey) return;
+    if (!window.confirm("⚠️ This will erase ALL users and emails. Continue?")) return;
+
+    try {
+      await axios.post(`${API_BASE}/auth/admin/clear-db`, { adminKey });
+      toast.success("Entire database cleared successfully!");
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Failed to clear database");
     }
@@ -88,57 +102,32 @@ const handleSubmit = async (e: React.FormEvent) => {
       <div className="bg-white p-8 rounded shadow-md w-full max-w-md">
         <h2 className="text-2xl font-bold mb-6 text-center">KMail Login</h2>
 
-        {/* ✅ Show logout if token exists */}
         {token ? (
-  <div className="text-center space-y-4">
-    <p>You are currently logged in.</p>
+          <div className="text-center space-y-4">
+            <p>You are currently logged in.</p>
 
-    {/* Logout */}
-    <button
-      onClick={handleLogout}
-      className="w-full bg-red-600 text-white p-3 rounded hover:bg-red-700"
-    >
-      Logout
-    </button>
+            <button
+              onClick={handleLogout}
+              className="w-full bg-red-600 text-white p-3 rounded hover:bg-red-700"
+            >
+              Logout
+            </button>
 
-    {/* Clear My Emails */}
-    <button
-      onClick={async () => {
-        if (!window.confirm("⚠️ Are you sure? This will delete all your emails.")) return;
-        try {
-          await axios.delete(`${API_BASE}/auth/clear-my-emails`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          toast.success("All your emails have been deleted!");
-        } catch (err: any) {
-          toast.error(err.response?.data?.message || "Failed to clear emails");
-        }
-      }}
-      className="w-full bg-gray-700 text-white p-3 rounded hover:bg-gray-800"
-    >
-      Clear My Emails
-    </button>
+            <button
+              onClick={handleClearMyEmails}
+              className="w-full bg-gray-700 text-white p-3 rounded hover:bg-gray-800"
+            >
+              Clear My Emails
+            </button>
 
-    {/* Admin: Clear Entire Database */}
-    <button
-      onClick={async () => {
-        const adminKey = prompt("Enter admin password to clear the entire database:");
-        if (!adminKey) return;
-        if (!window.confirm("⚠️ This will erase ALL users and emails. Continue?")) return;
-
-        try {
-          await axios.post(`${API_BASE}/auth/admin/clear-db`, { adminKey });
-          toast.success("Entire database cleared successfully!");
-        } catch (err: any) {
-          toast.error(err.response?.data?.message || "Failed to clear database");
-        }
-      }}
-      className="w-full bg-red-700 text-white p-3 rounded hover:bg-red-800 text-sm"
-    >
-      🧹 Clear Entire Database (Admin)
-    </button>
-  </div>
-) : (
+            <button
+              onClick={handleAdminClearDatabase}
+              className="w-full bg-red-700 text-white p-3 rounded hover:bg-red-800 text-sm"
+            >
+              🧹 Clear Entire Database (Admin)
+            </button>
+          </div>
+        ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             <input
               type="email"
@@ -178,7 +167,6 @@ const handleSubmit = async (e: React.FormEvent) => {
           </p>
         </div>
 
-        {/* ✅ Status Panel */}
         <div className="mt-6 p-3 bg-gray-50 rounded text-sm border text-center">
           <p>
             Backend:{" "}
