@@ -1,4 +1,3 @@
-// src/components/Inbox.tsx
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
@@ -22,7 +21,9 @@ const Inbox: React.FC<Props> = ({ token }) => {
   const [emails, setEmails] = useState<Email[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedIds, setExpandedIds] = useState<string[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
+  // Fetch Inbox Emails
   useEffect(() => {
     const fetchInbox = async () => {
       setLoading(true);
@@ -40,10 +41,49 @@ const Inbox: React.FC<Props> = ({ token }) => {
     fetchInbox();
   }, [token]);
 
+  // Toggle Expanded Email
   const toggleExpand = (id: string) => {
     setExpandedIds((prev) =>
       prev.includes(id) ? prev.filter((eid) => eid !== id) : [...prev, id]
     );
+  };
+
+  // Toggle Select Email
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((eid) => eid !== id) : [...prev, id]
+    );
+  };
+
+  // Select All / Unselect All
+  const toggleSelectAll = () => {
+    if (selectedIds.length === emails.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(emails.map((e) => e._id));
+    }
+  };
+
+  // Delete Selected
+  const deleteSelected = async () => {
+    if (selectedIds.length === 0) return toast.info("No emails selected");
+
+    if (!confirm("Delete selected emails?")) return;
+
+    try {
+      await Promise.all(
+        selectedIds.map((id) =>
+          axios.delete(`${API_BASE}/emails/${id}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          })
+        )
+      );
+      setEmails((prev) => prev.filter((e) => !selectedIds.includes(e._id)));
+      setSelectedIds([]);
+      toast.success("Selected emails deleted");
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to delete emails");
+    }
   };
 
   if (loading) return <p>Loading emails...</p>;
@@ -51,14 +91,45 @@ const Inbox: React.FC<Props> = ({ token }) => {
 
   return (
     <div className="space-y-4">
+      <div className="flex justify-between items-center mb-2">
+        <div>
+          <input
+            type="checkbox"
+            checked={selectedIds.length === emails.length}
+            onChange={toggleSelectAll}
+          />{" "}
+          <span className="ml-1">Select All</span>
+        </div>
+        <button
+          onClick={deleteSelected}
+          className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600"
+        >
+          Delete Selected
+        </button>
+      </div>
+
       {emails.map((email) => (
-        <div key={email._id} className="bg-white p-4 rounded shadow">
+        <div
+          key={email._id}
+          className={`bg-white p-4 rounded shadow border ${
+            selectedIds.includes(email._id)
+              ? "border-blue-400 bg-blue-50"
+              : "border-gray-200"
+          }`}
+        >
           <div className="flex justify-between items-center">
-            <div>
-              <p className="font-semibold">
-                {email.sender.name} &lt;{email.sender.email}&gt;
-              </p>
-              <p className="text-gray-600">{email.subject}</p>
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={selectedIds.includes(email._id)}
+                onChange={() => toggleSelect(email._id)}
+              />
+              <div>
+                <p className="font-semibold">
+                  {email.sender.name} &lt;{email.sender.email}&gt;
+                </p>
+                <p className="text-gray-600">{email.subject}</p>
+              </div>
             </div>
             <p className="text-gray-500 text-sm">
               {new Date(email.createdAt).toLocaleString()}
