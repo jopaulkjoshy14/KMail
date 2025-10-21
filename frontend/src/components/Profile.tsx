@@ -42,7 +42,7 @@ const Profile: React.FC<Props> = ({ token }) => {
 
     setLoading(true);
     try {
-      const res = await axios.put(
+      await axios.put(
         `${API_BASE}/profile`,
         { name, currentPassword, newPassword },
         { headers: { Authorization: `Bearer ${token}` } }
