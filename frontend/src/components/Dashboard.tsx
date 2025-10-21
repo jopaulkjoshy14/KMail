@@ -1,4 +1,3 @@
-// src/components/Dashboard.tsx
 import React from "react";
 import { Link, Outlet, useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -6,18 +5,18 @@ import { toast } from "react-toastify";
 
 interface Props {
   token: string;
-  setToken: React.Dispatch<React.SetStateAction<string | null>>; // ✅ Add this
+  setToken: React.Dispatch<React.SetStateAction<string | null>>;
 }
 
 const API_BASE = import.meta.env.VITE_API_BASE || "/api";
 
-const Dashboard: React.FC<Props> = ({ token, setToken }) => { // ✅ include it here
+const Dashboard: React.FC<Props> = ({ token, setToken }) => {
   const navigate = useNavigate();
 
   // ✅ Logout
   const handleLogout = () => {
     localStorage.removeItem("token");
-    setToken(null); // ✅ clear React state too
+    setToken(null);
     toast.info("Logged out successfully");
     navigate("/"); // redirect to login
   };
@@ -26,7 +25,7 @@ const Dashboard: React.FC<Props> = ({ token, setToken }) => { // ✅ include it 
   const handleClearMyEmails = async () => {
     if (!window.confirm("⚠️ Are you sure? This will delete all your emails.")) return;
     try {
-      await axios.delete(`${API_BASE}/auth/clear-my-emails`, {
+      await axios.delete(`${API_BASE}/emails/clear`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       toast.success("All your emails have been deleted!");
@@ -44,6 +43,12 @@ const Dashboard: React.FC<Props> = ({ token, setToken }) => { // ✅ include it 
     try {
       await axios.post(`${API_BASE}/auth/admin/clear-db`, { adminKey });
       toast.success("Entire database cleared successfully!");
+
+      // ✅ After clearing DB, logout user
+      localStorage.removeItem("token");
+      setToken(null);
+      toast.info("Database cleared. Please log in again.");
+      navigate("/");
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Failed to clear database");
     }
@@ -54,11 +59,20 @@ const Dashboard: React.FC<Props> = ({ token, setToken }) => { // ✅ include it 
       {/* Navbar */}
       <nav className="bg-white shadow p-4 flex justify-between items-center">
         <div className="space-x-4">
-          <Link to="/" className="text-blue-600 hover:underline font-semibold">Inbox</Link>
-          <Link to="/sent" className="text-blue-600 hover:underline font-semibold">Sent</Link>
-          <Link to="/compose" className="text-blue-600 hover:underline font-semibold">Compose</Link>
-          <Link to="/profile" className="text-blue-600 hover:underline font-semibold">Profile</Link>
+          <Link to="/" className="text-blue-600 hover:underline font-semibold">
+            Inbox
+          </Link>
+          <Link to="/sent" className="text-blue-600 hover:underline font-semibold">
+            Sent
+          </Link>
+          <Link to="/compose" className="text-blue-600 hover:underline font-semibold">
+            Compose
+          </Link>
+          <Link to="/profile" className="text-blue-600 hover:underline font-semibold">
+            Profile
+          </Link>
         </div>
+
         <div className="space-x-2">
           <button
             onClick={handleClearMyEmails}
