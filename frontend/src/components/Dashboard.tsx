@@ -1,4 +1,3 @@
-// src/components/Dashboard.tsx
 import React from "react";
 import { Link, Outlet, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -11,34 +10,56 @@ interface Props {
 const Dashboard: React.FC<Props> = ({ token, setToken }) => {
   const navigate = useNavigate();
 
-  // ✅ Logout
+  // Logout
   const handleLogout = () => {
     localStorage.removeItem("token");
     setToken(null);
     toast.info("Logged out successfully");
-    navigate("/"); // redirect to login
+    navigate("/");
+  };
+
+  // Admin: Clear entire database
+  const handleAdminClearDatabase = async () => {
+    const adminKey = prompt("Enter admin password to clear the entire database:");
+    if (!adminKey) return;
+    if (!window.confirm("⚠️ This will erase ALL users and emails. Continue?")) return;
+
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE || "/api"}/auth/admin/clear-db`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ adminKey }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to clear database");
+
+      toast.success("Entire database cleared successfully!");
+      localStorage.removeItem("token");
+      setToken(null);
+      toast.info("Database cleared. Please log in again.");
+      navigate("/");
+    } catch (err: any) {
+      toast.error(err.message);
+    }
   };
 
   return (
     <div className="min-h-screen bg-gray-100">
-      {/* Navbar */}
       <nav className="bg-white shadow p-4 flex justify-between items-center">
         <div className="space-x-4">
-          <Link to="/" className="text-blue-600 hover:underline font-semibold">
-            Inbox
-          </Link>
-          <Link to="/sent" className="text-blue-600 hover:underline font-semibold">
-            Sent
-          </Link>
-          <Link to="/compose" className="text-blue-600 hover:underline font-semibold">
-            Compose
-          </Link>
-          <Link to="/profile" className="text-blue-600 hover:underline font-semibold">
-            Profile
-          </Link>
+          <Link to="/" className="text-blue-600 hover:underline font-semibold">Inbox</Link>
+          <Link to="/sent" className="text-blue-600 hover:underline font-semibold">Sent</Link>
+          <Link to="/compose" className="text-blue-600 hover:underline font-semibold">Compose</Link>
+          <Link to="/profile" className="text-blue-600 hover:underline font-semibold">Profile</Link>
         </div>
 
-        <div>
+        <div className="space-x-2">
+          <button
+            onClick={handleAdminClearDatabase}
+            className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 text-sm"
+          >
+            🧹 Clear Database
+          </button>
           <button
             onClick={handleLogout}
             className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 text-sm"
@@ -48,7 +69,6 @@ const Dashboard: React.FC<Props> = ({ token, setToken }) => {
         </div>
       </nav>
 
-      {/* Page content */}
       <main className="p-6">
         <Outlet />
       </main>
