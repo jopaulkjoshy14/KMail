@@ -2,7 +2,6 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import User from "../models/User.js";
 import mongoose from "mongoose";
-import Email from "../models/Email.js"; // ✅ Import Mail for email-related clears
 
 // Generate JWT Token
 const generateToken = (id) => {
@@ -38,19 +37,12 @@ export const loginUser = async (req, res) => {
 
   try {
     const user = await User.findOne({ email });
-    if (!user) {
-      console.warn(`Login attempt failed: No user found for ${email}`);
-      return res.status(401).json({ message: "Invalid email or password" });
-    }
-
-    if (!user.password) {
-      console.warn(`Login attempt failed: User ${email} has no password`);
+    if (!user || !user.password) {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      console.warn(`Login attempt failed: Incorrect password for ${email}`);
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
@@ -68,7 +60,6 @@ export const adminClearDatabase = async (req, res) => {
     const { adminKey } = req.body;
 
     if (adminKey !== process.env.ADMIN_CLEAR_KEY) {
-      console.warn("Unauthorized admin clear attempt");
       return res.status(403).json({ message: "Unauthorized: Invalid admin key" });
     }
 
@@ -77,17 +68,5 @@ export const adminClearDatabase = async (req, res) => {
   } catch (error) {
     console.error("Admin DB clear error:", error);
     res.status(500).json({ message: "Failed to clear entire database" });
-  }
-};
-
-// ✅ Clear user’s emails only (personal clear)
-export const clearUserEmails = async (req, res) => {
-  try {
-    const userId = req.user.id;
-    await Email.deleteMany({ $or: [{ from: userId }, { to: userId }] });
-    res.json({ message: "Your emails have been cleared successfully" });
-  } catch (error) {
-    console.error("User email clear error:", error);
-    res.status(500).json({ message: "Failed to clear your emails" });
   }
 };
