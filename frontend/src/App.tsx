@@ -1,4 +1,3 @@
-// src/App.tsx
 import React, { useEffect, useState } from "react";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
@@ -19,7 +18,7 @@ const App: React.FC = () => {
   const [showRegister, setShowRegister] = useState(false);
   const location = useLocation();
 
-  // ✅ Check for Google OAuth token or stored JWT
+  // ✅ Check for OAuth token or stored JWT
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const oauthToken = params.get("token");
@@ -41,7 +40,7 @@ const App: React.FC = () => {
     const interval = setInterval(() => {
       try {
         const payload = JSON.parse(atob(token.split(".")[1]));
-        const exp = payload.exp * 1000; // convert seconds → ms
+        const exp = payload.exp * 1000;
         if (Date.now() >= exp) {
           localStorage.removeItem("token");
           setToken(null);
@@ -52,12 +51,12 @@ const App: React.FC = () => {
         setToken(null);
         toast.warn("Invalid token. Please log in again.");
       }
-    }, 60000); // check every minute
+    }, 60000);
 
     return () => clearInterval(interval);
   }, [token]);
 
-  // ✅ Verify token with backend once (optional safeguard)
+  // ✅ Verify token with backend once
   useEffect(() => {
     const verifyToken = async () => {
       if (!token) return;
@@ -74,34 +73,34 @@ const App: React.FC = () => {
     verifyToken();
   }, [token]);
 
-  // ✅ Not logged in → show login or register
-  if (!token) {
-    return showRegister ? (
-      <RegisterForm
-        onRegister={(t) => setToken(t)}
-        onSwitchToLogin={() => setShowRegister(false)}
-      />
-    ) : (
-      <LoginForm
-        onLogin={(t) => setToken(t)}
-        onSwitchToRegister={() => setShowRegister(true)}
-      />
-    );
-  }
-
-  // ✅ Logged in → render Dashboard with nested routes
   return (
     <div className="min-h-screen bg-gray-100">
+      {/* ✅ Always-mounted toast container */}
       <ToastContainer />
-      <Routes>
-        <Route path="/" element={<Dashboard token={token} setToken={setToken} />}>
-          <Route index element={<Inbox token={token} />} />
-          <Route path="sent" element={<Sent token={token} />} />
-          <Route path="compose" element={<ComposeEmail token={token} />} />
-          <Route path="profile" element={<Profile token={token} />} />
-        </Route>
-        <Route path="*" element={<Navigate to="/" />} />
-      </Routes>
+
+      {!token ? (
+        showRegister ? (
+          <RegisterForm
+            onRegister={(t) => setToken(t)}
+            onSwitchToLogin={() => setShowRegister(false)}
+          />
+        ) : (
+          <LoginForm
+            onLogin={(t) => setToken(t)}
+            onSwitchToRegister={() => setShowRegister(true)}
+          />
+        )
+      ) : (
+        <Routes>
+          <Route path="/" element={<Dashboard token={token} setToken={setToken} />}>
+            <Route index element={<Inbox token={token} />} />
+            <Route path="sent" element={<Sent token={token} />} />
+            <Route path="compose" element={<ComposeEmail token={token} />} />
+            <Route path="profile" element={<Profile token={token} />} />
+          </Route>
+          <Route path="*" element={<Navigate to="/" />} />
+        </Routes>
+      )}
     </div>
   );
 };
