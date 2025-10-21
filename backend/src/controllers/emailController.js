@@ -1,15 +1,16 @@
 import Email from "../models/Email.js";
 import { encrypt, decrypt } from "../utils/encryption.js";
 
-// @desc    Send a new email
-// @route   POST /api/emails/send
-// @access  Private
+// Send email
 export const sendEmail = async (req, res) => {
-  const { recipients, subject, content } = req.body;
+  let { to, subject, content } = req.body;
 
-  if (!recipients || !content) {
+  if (!to || !content)
     return res.status(400).json({ message: "Recipients and content required" });
-  }
+
+  const recipients = to.split(",").map((r) => r.trim()).filter(Boolean);
+  if (recipients.length === 0)
+    return res.status(400).json({ message: "Recipients cannot be empty" });
 
   try {
     const email = await Email.create({
@@ -21,53 +22,42 @@ export const sendEmail = async (req, res) => {
 
     res.status(201).json({ message: "Email sent successfully", emailId: email._id });
   } catch (error) {
+    console.error(error);
     res.status(500).json({ message: "Failed to send email" });
   }
 };
 
-// @desc    Get inbox emails
-// @route   GET /api/emails/inbox
-// @access  Private
+// Inbox
 export const getInbox = async (req, res) => {
   try {
     const emails = await Email.find({ recipients: req.user.email })
       .populate("sender", "name email avatar")
       .sort({ createdAt: -1 });
 
-    const decryptedEmails = emails.map((email) => ({
-      ...email._doc,
-      content: decrypt(email.content),
-    }));
-
-    res.json(decryptedEmails);
+    const decrypted = emails.map((e) => ({ ...e._doc, content: decrypt(e.content) }));
+    res.json(decrypted);
   } catch (error) {
+    console.error(error);
     res.status(500).json({ message: "Failed to fetch inbox" });
   }
 };
 
-// @desc    Get sent emails
-// @route   GET /api/emails/sent
-// @access  Private
+// Sent
 export const getSent = async (req, res) => {
   try {
     const emails = await Email.find({ sender: req.user._id })
       .populate("sender", "name email avatar")
       .sort({ createdAt: -1 });
 
-    const decryptedEmails = emails.map((email) => ({
-      ...email._doc,
-      content: decrypt(email.content),
-    }));
-
-    res.json(decryptedEmails);
+    const decrypted = emails.map((e) => ({ ...e._doc, content: decrypt(e.content) }));
+    res.json(decrypted);
   } catch (error) {
+    console.error(error);
     res.status(500).json({ message: "Failed to fetch sent emails" });
   }
 };
 
-// @desc    Clear all emails for the user
-// @route   DELETE /api/emails/clear
-// @access  Private
+// Clear user emails
 export const clearEmails = async (req, res) => {
   try {
     await Email.deleteMany({
@@ -76,6 +66,7 @@ export const clearEmails = async (req, res) => {
 
     res.json({ message: "All emails cleared" });
   } catch (error) {
+    console.error(error);
     res.status(500).json({ message: "Failed to clear emails" });
   }
 };
