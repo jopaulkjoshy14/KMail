@@ -6,21 +6,23 @@ import { toast } from "react-toastify";
 
 interface Props {
   token: string;
+  setToken: React.Dispatch<React.SetStateAction<string | null>>; // ✅ Add this
 }
 
 const API_BASE = import.meta.env.VITE_API_BASE || "/api";
 
-const Dashboard: React.FC<Props> = ({ token }) => {
+const Dashboard: React.FC<Props> = ({ token, setToken }) => { // ✅ include it here
   const navigate = useNavigate();
 
-  // Logout
+  // ✅ Logout
   const handleLogout = () => {
     localStorage.removeItem("token");
-    toast.info("Logged out");
+    setToken(null); // ✅ clear React state too
+    toast.info("Logged out successfully");
     navigate("/"); // redirect to login
   };
 
-  // Clear current user's emails
+  // ✅ Clear current user's emails
   const handleClearMyEmails = async () => {
     if (!window.confirm("⚠️ Are you sure? This will delete all your emails.")) return;
     try {
@@ -33,7 +35,7 @@ const Dashboard: React.FC<Props> = ({ token }) => {
     }
   };
 
-  // Admin: Clear entire database
+  // ✅ Admin: Clear entire database
   const handleAdminClearDatabase = async () => {
     const adminKey = prompt("Enter admin password to clear the entire database:");
     if (!adminKey) return;
