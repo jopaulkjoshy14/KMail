@@ -56,12 +56,13 @@ export const updateProfile = async (req, res) => {
     const user = await User.findById(userId);
 
     if (newPassword) {
-      if (!currentPassword) return res.status(400).json({ message: "Current password required" });
+      if (!currentPassword)
+        return res.status(400).json({ message: "Current password required" });
 
       const match = await bcrypt.compare(currentPassword, user.password);
       if (!match) return res.status(401).json({ message: "Current password is incorrect" });
 
-      user.password = newPassword;
+      user.password = newPassword; // pre-save hook will hash it
     }
 
     user.name = name || user.name;
