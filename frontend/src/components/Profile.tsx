@@ -1,12 +1,10 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
 import { toast } from "react-toastify";
+import { getProfile, updateProfile } from "../api/profile"; // API helper
 
 interface Props {
   token: string;
 }
-
-const API_BASE = import.meta.env.VITE_API_BASE || "/api";
 
 const Profile: React.FC<Props> = ({ token }) => {
   const [name, setName] = useState("");
@@ -15,43 +13,38 @@ const Profile: React.FC<Props> = ({ token }) => {
   const [newPassword, setNewPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Fetch user profile
   useEffect(() => {
-    const fetchProfile = async () => {
+    const fetchData = async () => {
       setLoading(true);
       try {
-        const res = await axios.get(`${API_BASE}/profile`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setName(res.data.name);
-        setEmail(res.data.email);
+        const data = await getProfile(token);
+        setName(data.name);
+        setEmail(data.email);
       } catch (err: any) {
-        toast.error(err.response?.data?.message || "Failed to fetch profile");
+        toast.error(err.message || "Failed to fetch profile");
       } finally {
         setLoading(false);
       }
     };
-    fetchProfile();
+    fetchData();
   }, [token]);
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
+
     if (newPassword && !currentPassword) {
-      toast.error("You must enter your current password to change it");
-      return;
+      return toast.error("Enter current password to change password");
     }
 
     setLoading(true);
     try {
-      await axios.put(
-        `${API_BASE}/profile`,
-        { name, currentPassword, newPassword },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      toast.success("Profile updated successfully");
+      await updateProfile(token, { name, currentPassword, newPassword });
+      toast.success("Profile updated successfully!");
       setCurrentPassword("");
       setNewPassword("");
     } catch (err: any) {
-      toast.error(err.response?.data?.message || "Failed to update profile");
+      toast.error(err.message || "Failed to update profile");
     } finally {
       setLoading(false);
     }
@@ -97,13 +90,13 @@ const Profile: React.FC<Props> = ({ token }) => {
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
             className="w-full p-3 border rounded"
-            placeholder="Leave blank to keep current"
+            placeholder="Leave blank to keep current password"
           />
         </div>
         <button
           type="submit"
           disabled={loading}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 w-full"
         >
           {loading ? "Updating..." : "Update Profile"}
         </button>
