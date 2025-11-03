@@ -1,7 +1,7 @@
 {
   "name": "kmail-backend",
   "version": "1.0.0",
-  "type":"module",
+  "type": "module",
   "description": "Backend for KMail - production ready",
   "main": "src/index.js",
   "scripts": {
@@ -16,11 +16,19 @@
     "express": "^4.18.2",
     "googleapis": "^121.0.0",
     "jsonwebtoken": "^9.0.2",
-    "mongoose": "^7.5.0"
+    "mongoose": "^7.5.0",
+
+    /** --- 🔐 Crypto + PQC dependencies --- */
+    "crystals-kyber-js": "^1.0.2",          // Post-quantum Kyber KEM (used in encryption.js)
+    "tweetnacl": "^1.0.3",                  // lightweight crypto helper (optional, used in frontend interop)
+    "base64-arraybuffer": "^1.0.2"          // safe base64 encoding for Uint8Array across Node/browser
   },
   "devDependencies": {
     "jest": "^29.7.0",
     "supertest": "^6.3.3",
     "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
