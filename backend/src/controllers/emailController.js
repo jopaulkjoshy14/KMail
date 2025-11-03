@@ -1,8 +1,8 @@
 import Email from "../models/Email.js";
 import { hybridEncrypt, hybridDecrypt } from "../utils/encryption.js";
-import User from "../models/User.js"; // to fetch recipient public keys
+import User from "../models/User.js"; // to fetch recipient PQC public keys
 
-// Send email (Quantum-safe hybrid encryption)
+// Send email (Kyber + AES-GCM hybrid encryption)
 export const sendEmail = async (req, res) => {
   const { to, subject, content } = req.body;
 
@@ -14,19 +14,19 @@ export const sendEmail = async (req, res) => {
     return res.status(400).json({ message: "Recipients cannot be empty" });
 
   try {
-    // Fetch recipient public keys from DB
+    // Fetch PQC public keys of all recipients
     const users = await User.find({ email: { $in: recipients } }, "email pqPublicKey");
     if (users.length === 0)
       return res.status(400).json({ message: "No valid recipients found" });
 
-    // Encrypt the message with hybrid encryption per recipient
+    // Encrypt once with AES, wrap key per recipient using Kyber
     const wrappedKeys = {};
-    let ciphertext, iv; // same ciphertext for all recipients, different wrapped AES keys
+    let ciphertext, iv;
     for (const user of users) {
       const result = await hybridEncrypt(content, user.pqPublicKey);
       ciphertext = result.ciphertext;
       iv = result.iv;
-      wrappedKeys[user.email] = result.wrappedKey; // Kyber-encapsulated AES key
+      wrappedKeys[user.email] = result.wrappedKey; // per-user encapsulated AES key
     }
 
     const email = await Email.create({
@@ -40,12 +40,12 @@ export const sendEmail = async (req, res) => {
 
     res.status(201).json({ message: "Email sent securely", emailId: email._id });
   } catch (error) {
-    console.error("Send email error:", error);
+    console.error("❌ Send email error:", error);
     res.status(500).json({ message: "Failed to send email" });
   }
 };
 
-// Inbox (Decrypt PQC hybrid encrypted emails)
+// Fetch inbox (decrypt with recipient’s PQC private key)
 export const getInbox = async (req, res) => {
   try {
     const emails = await Email.find({ recipients: req.user.email })
@@ -64,7 +64,8 @@ export const getInbox = async (req, res) => {
             req.user.pqPrivateKey
           );
           return { ...e._doc, content: decryptedContent };
-        } catch {
+        } catch (err) {
+          console.warn("Decryption failed for one message:", err);
           return { ...e._doc, content: "[Decryption failed]" };
         }
       })
@@ -72,12 +73,12 @@ export const getInbox = async (req, res) => {
 
     res.json(decrypted);
   } catch (error) {
-    console.error("Inbox fetch error:", error);
+    console.error("❌ Inbox fetch error:", error);
     res.status(500).json({ message: "Failed to fetch inbox" });
   }
 };
 
-// Sent items
+// Fetch sent items (decrypt using sender’s private key for local view)
 export const getSent = async (req, res) => {
   try {
     const emails = await Email.find({ sender: req.user._id })
@@ -96,7 +97,7 @@ export const getSent = async (req, res) => {
             req.user.pqPrivateKey
           );
           return { ...e._doc, content: decryptedContent };
-        } catch {
+        } catch (err) {
           return { ...e._doc, content: "[Decryption failed]" };
         }
       })
@@ -104,12 +105,12 @@ export const getSent = async (req, res) => {
 
     res.json(decrypted);
   } catch (error) {
-    console.error("Sent fetch error:", error);
+    console.error("❌ Sent fetch error:", error);
     res.status(500).json({ message: "Failed to fetch sent emails" });
   }
 };
 
-// Clear user emails
+// Clear user emails (sender + recipient wipe)
 export const clearEmails = async (req, res) => {
   try {
     await Email.deleteMany({
@@ -117,7 +118,7 @@ export const clearEmails = async (req, res) => {
     });
     res.json({ message: "All emails cleared" });
   } catch (error) {
-    console.error("Clear emails error:", error);
+    console.error("❌ Clear emails error:", error);
     res.status(500).json({ message: "Failed to clear emails" });
   }
 };
