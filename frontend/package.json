@@ -16,9 +16,7 @@
     "react-dom": "^18.3.0",
     "react-router-dom": "^6.22.0",
     "react-toastify": "^9.1.2",
-    "tailwindcss": "^3.3.3",
-    "crystals-kyber-js": "^0.5.1",
-    "crystals-dilithium-js": "^0.5.1"
+    "tailwindcss": "^3.3.3"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.1.0",
