@@ -12,6 +12,9 @@ const Layout = () => {
       <aside className="w-60 bg-gray-200 dark:bg-gray-800 p-4 space-y-3">
         <nav className="flex flex-col space-y-2">
           <Link to="/inbox">Inbox</Link>
+          <Link to="/sent">Sent</Link>
+          <Link to="/drafts">Drafts</Link>
+          <Link to="/trash">Trash</Link>
           <Link to="/compose">Compose</Link>
           <Link to="/profile">Profile</Link>
           <button onClick={logout}>Logout</button>
