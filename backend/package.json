@@ -1,34 +1,33 @@
 {
   "name": "kmail-backend",
   "version": "1.0.0",
-  "type": "module",
-  "description": "Backend for KMail - production ready",
-  "main": "src/index.js",
+  "description": "Quantum-resistant, end-to-end encrypted mail platform backend (Node.js + Express + MongoDB Atlas)",
+  "main": "server.js",
   "scripts": {
-    "start": "node src/index.js",
-    "dev": "nodemon src/index.js",
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "lint": "eslint .",
     "test": "jest"
   },
   "dependencies": {
-    "bcryptjs": "^2.4.3",
+    "express": "^4.18.2",
+    "mongoose": "^7.3.4",
+    "helmet": "^7.0.0",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
-    "express": "^4.18.2",
-    "googleapis": "^121.0.0",
+    "bcrypt": "^5.1.1",
     "jsonwebtoken": "^9.0.2",
-    "mongoose": "^7.5.0",
-
-    /** --- 🔐 Crypto + PQC dependencies --- */
-    "crystals-kyber-js": "^1.0.2",          // Post-quantum Kyber KEM (used in encryption.js)
-    "tweetnacl": "^1.0.3",                  // lightweight crypto helper (optional, used in frontend interop)
-    "base64-arraybuffer": "^1.0.2"          // safe base64 encoding for Uint8Array across Node/browser
+    "express-rate-limit": "^6.9.0",
+    "joi": "^17.11.0",
+    "multer": "^1.4.5-lts.1",
+    "gridfs-stream": "^1.1.1",
+    "winston": "^3.10.0"
   },
   "devDependencies": {
+    "nodemon": "^3.0.1",
+    "eslint": "^8.56.0",
+    "prettier": "^3.0.1",
     "jest": "^29.7.0",
-    "supertest": "^6.3.3",
-    "nodemon": "^3.0.1"
-  },
-  "engines": {
-    "node": ">=18.0.0"
+    "supertest": "^6.3.3"
   }
 }
