@@ -33,3 +33,11 @@ src/
 - Server never sees plaintext messages.
 - Private keys are encrypted in IndexedDB, protected by password-derived AES-GCM.
 - If post-quantum libraries fail, automatic WebCrypto fallback ensures safe but downgraded security (AES + RSA temporarily).
+
+## Attachment Encryption
+Each file is encrypted locally using AES‑GCM with a random key.
+The AES key is itself encrypted (wrapped) using the recipient’s Kyber public key.
+The backend never sees files or keys in plaintext.
+
+## Drafts
+Drafts are autosaved locally every 10 seconds using IndexedDB and never uploaded until the user sends the message.
