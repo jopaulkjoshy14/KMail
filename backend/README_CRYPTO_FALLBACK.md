@@ -15,7 +15,7 @@ If these modules fail to load:
 - If unavailable, the client must block registration/login and show an error: "Quantum-safe libraries unavailable."
 - Do not fall back to RSA or ECDSA.
 
-## Safe Lin
+## Safe Link
 Clients should generate a token via local hashing:
 const safeLinkToken = crypto.subtle.digest("SHA-256", new TextEncoder().encode(messageId + nonce));
 
