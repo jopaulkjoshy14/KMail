@@ -1,0 +1,29 @@
+{
+  "name": "kmail-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "KMail Frontend — Post-Quantum Secure Email Client",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "idb": "^7.1.1",
+    "lucide-react": "^0.322.0",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "react-router-dom": "^6.22.0",
+    "react-toastify": "^9.1.2",
+    "tailwindcss": "^3.3.3",
+    "crystals-kyber-js": "^0.5.1",
+    "crystals-dilithium-js": "^0.5.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.1.0",
+    "autoprefixer": "^10.4.7",
+    "postcss": "^8.4.24",
+    "vite": "^4.4.9"
+  }
+}
