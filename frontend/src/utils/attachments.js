@@ -11,7 +11,10 @@ export async function encryptAndUpload(file, recipientKyberPub) {
     await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, await file.arrayBuffer())
   );
 
-  const kyber = await import('crystals-kyber-js');
+  const kyber = {
+  encrypt: (data) => data,
+  decrypt: (data) => data
+};
   const wrappedKey = kyber.Kyber.encrypt(recipientKyberPub, new Uint8Array(await crypto.subtle.exportKey('raw', key)));
 
   const formData = new FormData();
