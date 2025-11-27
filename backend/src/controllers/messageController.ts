@@ -1,347 +1,66 @@
 import { Request, Response, NextFunction } from 'express';
-import { db } from '../config/database';
-import { createError } from '../middleware/errorHandler';
-import { QuantumCrypto } from '../crypto/quantumCrypto';
+try {
+const { recipientEmail, subject, message } = req.body;
+const senderId = (req as any).user?.id;
+if (!recipientEmail || !message) throw createError('Recipient and message required', 400);
+const recipient = await User.findOne({ email: recipientEmail }).select('kyber_public_key');
+if (!recipient) throw createError('Recipient not found', 404);
+const sender = await User.findById(senderId).select('dilithium_private_key email name');
 
-export class MessageController {
-  static async sendMessage(req: Request, res: Response, next: NextFunction) {
-    try {
-      const { recipientEmail, subject, message } = req.body;
-      const senderId = (req as any).user?.id;
 
-      if (!recipientEmail || !message) {
-        throw createError('Recipient email and message are required', 400);
-      }
+const messageBuffer = Buffer.from(JSON.stringify({ subject: subject || '', body: message, sender: { email: sender?.email, name: sender?.name }, timestamp: new Date().toISOString() }));
 
-      if (message.length > 10000) {
-        throw createError('Message too long', 400);
-      }
 
-      // Find recipient
-      const recipient = await db('users')
-        .where({ email: recipientEmail })
-        .select('id', 'kyber_public_key', 'dilithium_public_key')
-        .first();
+const signature = await QuantumCrypto.sign(messageBuffer, sender?.dilithium_private_key as any);
+const ephemeral = await QuantumCrypto.generateKyberKeyPair();
+const encapsulation = await QuantumCrypto.encapsulate(recipient.kyber_public_key as any);
+const encrypted = QuantumCrypto.encryptMessage(messageBuffer, encapsulation.sharedSecret);
 
-      if (!recipient) {
-        throw createError('Recipient not found', 404);
-      }
 
-      // Get sender's keys for signing
-      const sender = await db('users')
-        .where({ id: senderId })
-        .select('dilithium_private_key', 'email', 'name')
-        .first();
+const saved = await Message.create({
+sender_id: senderId,
+recipient_id: recipient._id,
+subject: subject || '',
+encrypted_content: Buffer.from(encrypted.ciphertext),
+encryption_nonce: Buffer.from(encrypted.nonce || ''),
+encryption_auth_tag: Buffer.from(encrypted.authTag || ''),
+ephemeral_public_key: Buffer.from(ephemeral.publicKey || ''),
+kyber_ciphertext: Buffer.from(encapsulation.ciphertext || ''),
+signature: Buffer.from(signature || ''),
+created_at: new Date()
+});
 
-      // Create message data
-      const messageData = {
-        subject: subject || '',
-        body: message,
-        timestamp: new Date().toISOString(),
-        sender: {
-          email: sender.email,
-          name: sender.name,
-        },
-      };
 
-      const messageBuffer = Buffer.from(JSON.stringify(messageData));
+await AuditLog.create({ user_id: senderId, action: 'SEND_MESSAGE', resource_type: 'message', resource_id: saved._id.toString(), details: { recipient: recipientEmail, subject_length: subject?.length || 0, message_length: message.length } });
 
-      // Sign the message
-      const messageSignature = await QuantumCrypto.sign(
-        messageBuffer,
-        sender.dilithium_private_key
-      );
 
-      // Generate ephemeral key pair for this message
-      const ephemeralKeyPair = await QuantumCrypto.generateKyberKeyPair();
+res.status(201).json({ message: 'Message sent', messageId: saved._id });
+} catch (err) {
+next(err);
+}
+}
 
-      // Encapsulate shared secret with recipient's public key
-      const encapsulation = await QuantumCrypto.encapsulate(
-        recipient.kyber_public_key
-      );
 
-      // Encrypt the message
-      const encryptedMessage = QuantumCrypto.encryptMessage(
-        messageBuffer,
-        encapsulation.sharedSecret
-      );
+static async getInbox(req: Request, res: Response, next: NextFunction) {
+try {
+const userId = (req as any).user?.id;
+const page = Math.max(1, parseInt(req.query.page as any) || 1);
+const limit = Math.min(50, parseInt(req.query.limit as any) || 20);
+const messages = await Message.find({ recipient_id: userId }).populate('sender_id', 'name email').sort({ created_at: -1 }).skip((page-1)*limit).limit(limit).lean();
+res.json({ messages });
+} catch (err) { next(err); }
+}
 
-      // Store the encrypted message
-      const [savedMessage] = await db('messages').insert({
-        sender_id: senderId,
-        recipient_id: recipient.id,
-        subject,
-        encrypted_content: encryptedMessage.ciphertext,
-        encryption_nonce: encryptedMessage.nonce,
-        encryption_auth_tag: encryptedMessage.authTag,
-        ephemeral_public_key: ephemeralKeyPair.publicKey,
-        kyber_ciphertext: encapsulation.ciphertext,
-        signature: messageSignature,
-        created_at: new Date(),
-      }).returning('*');
 
-      // Log the message sending for audit
-      await db('audit_logs').insert({
-        user_id: senderId,
-        action: 'SEND_MESSAGE',
-        resource_type: 'message',
-        resource_id: savedMessage.id,
-        details: {
-          recipient: recipientEmail,
-          subject_length: subject?.length || 0,
-          message_length: message.length,
-        },
-        created_at: new Date(),
-      });
-
-      res.status(201).json({
-        message: 'Message sent successfully',
-        messageId: savedMessage.id,
-        timestamp: savedMessage.created_at,
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  static async getInbox(req: Request, res: Response, next: NextFunction) {
-    try {
-      const userId = (req as any).user?.id;
-      const page = Math.max(1, parseInt(req.query.page as string) || 1);
-      const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string) || 20));
-      const offset = (page - 1) * limit;
-
-      const messages = await db('messages')
-        .join('users as sender', 'messages.sender_id', 'sender.id')
-        .where({ recipient_id: userId })
-        .select(
-          'messages.id',
-          'messages.subject',
-          'sender.name as sender_name',
-          'sender.email as sender_email',
-          'messages.created_at',
-          'messages.is_read'
-        )
-        .orderBy('messages.created_at', 'desc')
-        .limit(limit)
-        .offset(offset);
-
-      const total = await db('messages')
-        .where({ recipient_id: userId })
-        .count('* as count')
-        .first();
-
-      res.json({
-        messages,
-        pagination: {
-          page,
-          limit,
-          total: parseInt(total?.count as string) || 0,
-          pages: Math.ceil((parseInt(total?.count as string) || 0) / limit),
-        },
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  static async getSentMessages(req: Request, res: Response, next: NextFunction) {
-    try {
-      const userId = (req as any).user?.id;
-      const page = Math.max(1, parseInt(req.query.page as string) || 1);
-      const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string) || 20));
-      const offset = (page - 1) * limit;
-
-      const messages = await db('messages')
-        .join('users as recipient', 'messages.recipient_id', 'recipient.id')
-        .where({ sender_id: userId })
-        .select(
-          'messages.id',
-          'messages.subject',
-          'recipient.name as recipient_name',
-          'recipient.email as recipient_email',
-          'messages.created_at'
-        )
-        .orderBy('messages.created_at', 'desc')
-        .limit(limit)
-        .offset(offset);
-
-      const total = await db('messages')
-        .where({ sender_id: userId })
-        .count('* as count')
-        .first();
-
-      res.json({
-        messages,
-        pagination: {
-          page,
-          limit,
-          total: parseInt(total?.count as string) || 0,
-          pages: Math.ceil((parseInt(total?.count as string) || 0) / limit),
-        },
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  static async getMessage(req: Request, res: Response, next: NextFunction) {
-    try {
-      const messageId = req.params.id;
-      const userId = (req as any).user?.id;
-
-      const message = await db('messages')
-        .join('users as sender', 'messages.sender_id', 'sender.id')
-        .join('users as recipient', 'messages.recipient_id', 'recipient.id')
-        .where({
-          'messages.id': messageId,
-          'messages.recipient_id': userId,
-        })
-        .select(
-          'messages.*',
-          'sender.name as sender_name',
-          'sender.email as sender_email',
-          'sender.dilithium_public_key as sender_public_key',
-          'recipient.name as recipient_name',
-          'recipient.email as recipient_email'
-        )
-        .first();
-
-      if (!message) {
-        throw createError('Message not found', 404);
-      }
-
-      // Get recipient's private key for decryption
-      const recipient = await db('users')
-        .where({ id: userId })
-        .select('kyber_private_key')
-        .first();
-
-      // Decapsulate shared secret
-      const sharedSecret = await QuantumCrypto.decapsulate(
-        message.kyber_ciphertext,
-        recipient.kyber_private_key
-      );
-
-      // Decrypt the message
-      const encryptedData = {
-        ciphertext: message.encrypted_content,
-        nonce: message.encryption_nonce,
-        authTag: message.encryption_auth_tag,
-      };
-
-      const decryptedBuffer = QuantumCrypto.decryptMessage(
-        encryptedData,
-        sharedSecret
-      );
-
-      const messageData = JSON.parse(decryptedBuffer.toString());
-
-      // Verify signature
-      const isValidSignature = await QuantumCrypto.verify(
-        message.signature,
-        decryptedBuffer,
-        message.sender_public_key
-      );
-
-      // Mark as read if not already read
-      if (!message.is_read) {
-        await db('messages')
-          .where({ id: messageId })
-          .update({ is_read: true, read_at: new Date() });
-      }
-
-      // Log message access for audit
-      await db('audit_logs').insert({
-        user_id: userId,
-        action: 'VIEW_MESSAGE',
-        resource_type: 'message',
-        resource_id: messageId,
-        details: {
-          signature_valid: isValidSignature,
-        },
-        created_at: new Date(),
-      });
-
-      res.json({
-        message: {
-          id: message.id,
-          subject: message.subject,
-          body: messageData.body,
-          sender: {
-            name: message.sender_name,
-            email: message.sender_email,
-          },
-          recipient: {
-            name: message.recipient_name,
-            email: message.recipient_email,
-          },
-          timestamp: message.created_at,
-          read: message.is_read,
-          read_at: message.read_at,
-          signatureValid: isValidSignature,
-        },
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  static async deleteMessage(req: Request, res: Response, next: NextFunction) {
-    try {
-      const messageId = req.params.id;
-      const userId = (req as any).user?.id;
-
-      const message = await db('messages')
-        .where({
-          id: messageId,
-          recipient_id: userId,
-        })
-        .first();
-
-      if (!message) {
-        throw createError('Message not found', 404);
-      }
-
-      await db('messages')
-        .where({
-          id: messageId,
-          recipient_id: userId,
-        })
-        .del();
-
-      // Log deletion for audit
-      await db('audit_logs').insert({
-        user_id: userId,
-        action: 'DELETE_MESSAGE',
-        resource_type: 'message',
-        resource_id: messageId,
-        created_at: new Date(),
-      });
-
-      res.json({ message: 'Message deleted successfully' });
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  static async getMessageStats(req: Request, res: Response, next: NextFunction) {
-    try {
-      const userId = (req as any).user?.id;
-
-      const [inboxCount, unreadCount, sentCount] = await Promise.all([
-        db('messages').where({ recipient_id: userId }).count('* as count').first(),
-        db('messages').where({ recipient_id: userId, is_read: false }).count('* as count').first(),
-        db('messages').where({ sender_id: userId }).count('* as count').first(),
-      ]);
-
-      res.json({
-        inbox: parseInt(inboxCount?.count as string) || 0,
-        unread: parseInt(unreadCount?.count as string) || 0,
-        sent: parseInt(sentCount?.count as string) || 0,
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
-                   }
+static async deleteMessage(req: Request, res: Response, next: NextFunction) {
+try {
+const messageId = req.params.id;
+const userId = (req as any).user?.id;
+const message = await Message.findOne({ _id: messageId, recipient_id: userId });
+if (!message) throw createError('Message not found', 404);
+await Message.deleteOne({ _id: messageId });
+await AuditLog.create({ user_id: userId, action: 'DELETE_MESSAGE', resource_type: 'message', resource_id: messageId });
+res.json({ message: 'Message deleted' });
+} catch (err) { next(err); }
+}
+}
