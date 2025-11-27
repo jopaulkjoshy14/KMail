@@ -20,7 +20,7 @@
 "dotenv": "^16.0.3",
 "ws": "^8.11.0",
 "libsodium-wrappers": "^0.7.10",
-"pqc-kyber": "^0.1.2",
+"pqc-kyber": "^0.7.0",
 "pqc-dilithium": "^0.2.0",
 "uuid": "^9.0.0",
 "validator": "^13.7.0",
