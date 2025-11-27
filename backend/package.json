@@ -19,8 +19,6 @@
     "express-rate-limit": "^6.7.0",
     "bcryptjs": "^2.4.3",
     "jsonwebtoken": "^9.0.0",
-    "pg": "^8.8.0",
-    "knex": "^2.3.0",
     "dotenv": "^16.0.3",
     "ws": "^8.11.0",
     "libsodium-wrappers": "^0.7.10",
