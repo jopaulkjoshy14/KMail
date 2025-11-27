@@ -1,137 +1,60 @@
 import { Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcryptjs';
-import { db } from '../config/database';
+import { User } from '../models/User';
 import { generateToken } from '../middleware/auth';
 import { createError } from '../middleware/errorHandler';
 import { QuantumCrypto } from '../crypto/quantumCrypto';
 
+
 export class AuthController {
-  static async register(req: Request, res: Response, next: NextFunction) {
-    try {
-      const { email, password, name } = req.body;
+static async register(req: Request, res: Response, next: NextFunction) {
+try {
+const { email, password, name } = req.body;
+if (!email || !password || !name) throw createError('Email, password, and name are required', 400);
+if (password.length < 8) throw createError('Password too short', 400);
 
-      // Validate input
-      if (!email || !password || !name) {
-        throw createError('Email, password, and name are required', 400);
-      }
 
-      if (password.length < 8) {
-        throw createError('Password must be at least 8 characters long', 400);
-      }
+const existing = await User.findOne({ email }).lean();
+if (existing) throw createError('User already exists', 409);
 
-      if (!email.includes('@')) {
-        throw createError('Invalid email format', 400);
-      }
 
-      // Check if user already exists
-      const existingUser = await db('users').where({ email }).first();
-      if (existingUser) {
-        throw createError('User with this email already exists', 409);
-      }
+const hashed = await bcrypt.hash(password, 12);
+const [kyber, dilithium] = await Promise.all([QuantumCrypto.generateKyberKeyPair(), QuantumCrypto.generateDilithiumKeyPair()]);
 
-      // Hash password
-      const hashedPassword = await bcrypt.hash(password, 12);
 
-      // Generate quantum-resistant key pairs
-      const [kyberKeyPair, dilithiumKeyPair] = await Promise.all([
-        QuantumCrypto.generateKyberKeyPair(),
-        QuantumCrypto.generateDilithiumKeyPair(),
-      ]);
+const created = await User.create({
+email,
+password_hash: hashed,
+name,
+kyber_public_key: Buffer.from(kyber.publicKey || ''),
+kyber_private_key: Buffer.from(kyber.privateKey || ''),
+dilithium_public_key: Buffer.from(dilithium.publicKey || ''),
+dilithium_private_key: Buffer.from(dilithium.privateKey || ''),
+created_at: new Date(),
+updated_at: new Date()
+});
 
-      // Create user in database
-      const [user] = await db('users').insert({
-        email,
-        password_hash: hashedPassword,
-        name,
-        kyber_public_key: kyberKeyPair.publicKey,
-        kyber_private_key: kyberKeyPair.privateKey,
-        dilithium_public_key: dilithiumKeyPair.publicKey,
-        dilithium_private_key: dilithiumKeyPair.privateKey,
-        created_at: new Date(),
-        updated_at: new Date(),
-      }).returning(['id', 'email', 'name', 'created_at']);
 
-      // Generate JWT token
-      const token = generateToken(user.id, user.email);
+const token = generateToken(created._id.toString(), created.email);
+res.status(201).json({ message: 'User registered', user: { id: created._id, email: created.email, name: created.name }, token });
+} catch (err) {
+next(err);
+}
+}
 
-      res.status(201).json({
-        message: 'User registered successfully',
-        user: {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          created_at: user.created_at,
-        },
-        token,
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
 
-  static async login(req: Request, res: Response, next: NextFunction) {
-    try {
-      const { email, password } = req.body;
-
-      if (!email || !password) {
-        throw createError('Email and password are required', 400);
-      }
-
-      // Find user
-      const user = await db('users')
-        .where({ email })
-        .select('id', 'email', 'name', 'password_hash', 'created_at')
-        .first();
-
-      if (!user) {
-        throw createError('Invalid email or password', 401);
-      }
-
-      // Verify password
-      const isValidPassword = await bcrypt.compare(password, user.password_hash);
-      if (!isValidPassword) {
-        throw createError('Invalid email or password', 401);
-      }
-
-      // Generate JWT token
-      const token = generateToken(user.id, user.email);
-
-      res.json({
-        message: 'Login successful',
-        user: {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          created_at: user.created_at,
-        },
-        token,
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  static async getCurrentUser(req: Request, res: Response, next: NextFunction) {
-    try {
-      const userId = (req as any).user?.id;
-
-      const user = await db('users')
-        .where({ id: userId })
-        .select('id', 'email', 'name', 'created_at', 'key_rotated_at')
-        .first();
-
-      if (!user) {
-        throw createError('User not found', 404);
-      }
-
-      res.json({ user });
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  static async logout(req: Request, res: Response) {
-    // In a real application, you might want to blacklist the token
-    res.json({ message: 'Logout successful' });
-  }
-      }
+static async login(req: Request, res: Response, next: NextFunction) {
+try {
+const { email, password } = req.body;
+if (!email || !password) throw createError('Email and password required', 400);
+const user = await User.findOne({ email }).select('+password_hash');
+if (!user) throw createError('Invalid email or password', 401);
+const valid = await bcrypt.compare(password, user.password_hash);
+if (!valid) throw createError('Invalid email or password', 401);
+const token = generateToken(user._id.toString(), user.email);
+res.json({ message: 'Login successful', user: { id: user._id, email: user.email, name: user.name }, token });
+} catch (err) {
+next(err);
+}
+}
+}
