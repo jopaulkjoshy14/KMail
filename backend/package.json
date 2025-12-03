@@ -1,7 +1,7 @@
 {
   "name": "kmail-backend",
   "version": "1.0.0",
-  "type":"module",
+  "type": "module",
   "description": "Backend for KMail - production ready",
   "main": "src/index.js",
   "scripts": {
