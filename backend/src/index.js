@@ -24,8 +24,7 @@ app.use(
 app.use(express.json());
 
 // ✅ Health check route
-app.get("/api/health", async (req, res) => {
-  const dbStatus = mongoose.connection.readyState;
+app.get("/api/health", (req, res) => {
   const states = {
     0: "disconnected",
     1: "connected",
@@ -33,12 +32,11 @@ app.get("/api/health", async (req, res) => {
     3: "disconnecting"
   };
 
-  res.json({
+  res.status(200).json({
     backend: "online",
-    database: states[dbStatus] || "unknown",
+    database: states[mongoose.connection.readyState] || "unknown",
   });
 });
-
 
 app.use("/api/auth", authRoutes);
 app.use("/api/emails", emailRoutes);
