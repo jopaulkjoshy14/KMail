@@ -26,15 +26,19 @@ app.use(express.json());
 // ✅ Health check route
 app.get("/api/health", async (req, res) => {
   const dbStatus = mongoose.connection.readyState;
-  let dbState = "disconnected";
-  if (dbStatus === 1) dbState = "connected";
-  else if (dbStatus === 2) dbState = "connecting";
+  const states = {
+    0: "disconnected",
+    1: "connected",
+    2: "connecting",
+    3: "disconnecting"
+  };
 
   res.json({
     backend: "online",
-    database: dbState,
+    database: states[dbStatus] || "unknown",
   });
 });
+
 
 app.use("/api/auth", authRoutes);
 app.use("/api/emails", emailRoutes);
