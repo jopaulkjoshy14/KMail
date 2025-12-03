@@ -1,9 +1,10 @@
 import crypto from "crypto";
 
-const key = Buffer.from(process.env.ENCRYPTION_KEY, "utf-8"); // must be 32 bytes
+const key = Buffer.from(process.env.ENCRYPTION_KEY, "base64"); // decode base64
 if (key.length !== 32) {
-  throw new Error("ENCRYPTION_KEY must be exactly 32 characters long");
+  throw new Error("ENCRYPTION_KEY must be exactly 32 bytes long");
 }
+
 const ivLength = 16;
 
 export const encrypt = (text) => {
