@@ -9,38 +9,46 @@ import profileRoutes from "./routes/profile.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 
 dotenv.config();
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 // -------------------------
-// Global Middlewares
-// -------------------------
-app.use(express.json());
-app.use(
-  cors({
-    origin: [
-      "http://localhost:5173",
-      "https://kmail-frontend.onrender.com"
-    ],
-    credentials: true,
-  })
-);
-
-// -------------------------
-// Connect Database
+// DB connection
 // -------------------------
 connectDB();
 
 // -------------------------
-// Health Check Route
+// Middleware
 // -------------------------
-app.get("/health", async (req, res) => {
-  const dbState =
-    mongoose.connection.readyState === 1 ? "online" : "offline";
+const allowedOrigin = process.env.CLIENT_URL || "*";
 
-  return res.json({
+app.use(
+  cors({
+    origin: allowedOrigin,
+    credentials: true,
+  })
+);
+
+app.use(express.json());
+
+// -------------------------
+// Health check route
+// -------------------------
+app.get("/api/health", (req, res) => {
+  // mongoose.connection.readyState:
+  // 0 = disconnected, 1 = connected, 2 = connecting, 3 = disconnecting
+  let dbStatus = "unknown";
+  const state = mongoose.connection.readyState;
+
+  if (state === 1) dbStatus = "connected";
+  else if (state === 0) dbStatus = "disconnected";
+  else if (state === 2) dbStatus = "connecting";
+  else if (state === 3) dbStatus = "disconnecting";
+
+  res.json({
     backend: "online",
-    database: dbState,
+    database: dbStatus,
   });
 });
 
