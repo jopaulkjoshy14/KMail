@@ -57,4 +57,5 @@ app.use(errorHandler);
 // -------------------------
 // Listen
 // -------------------------
+console.log("Render PORT is:", process.env.PORT);
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
